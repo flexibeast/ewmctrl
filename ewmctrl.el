@@ -237,6 +237,7 @@ PID field."
   (define-key ewmctrl-mode-map (kbd "Sp") 'ewmctrl-sort-by-pid)
   (define-key ewmctrl-mode-map (kbd "SP") 'ewmctrl-sort-by-pid-reversed))
 
+;;;###autoload
 (defun ewmctrl ()
   "Create and populate a new *ewmctrl* buffer."
   (interactive)
