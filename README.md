@@ -13,7 +13,7 @@
 
 ## Installation
 
-Put `ewmctrl.el` in your load-path and do a `(require 'ewmctrl)`.
+Install [ewmctrl from MELPA](http://melpa.org/#/ewmctrl), or put `ewmctrl.el` in your load-path and do a `(require 'ewmctrl)`.
 
 ## Usage
 
