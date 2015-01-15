@@ -56,6 +56,10 @@
 
 ;; * n - Change the name of the selected desktop window (`ewmctrl-change-window-name').
 
+;; * Sd - Sort the list of desktop windows numerically by desktop number (`ewmctrl-sort-by-desktop-number').
+
+;; * SD - Sort the list of desktop windows reverse-numerically by desktop number (`ewmctrl-sort-by-desktop-number-reversed').
+
 ;; * Sn - Sort the list of desktop windows lexicographically by name (`ewmctrl-sort-by-name').
 
 ;; * SN - Sort the list of desktop windows reverse-lexicographically by name (`ewmctrl-sort-by-name-reversed').
@@ -105,7 +109,7 @@
 
 (defcustom ewmctrl-sort-field 'name
   "Field on which to sort the list of desktop windows."
-  :type '(list name name-reversed pid pid-reversed)
+  :type '(list desktop-number desktop-number-reversed name name-reversed pid pid-reversed)
   :group 'ewmctrl)
 
 
@@ -131,6 +135,16 @@
                          (title . ,(match-string 9))))))))
     (kill-buffer bfr)
     (cond
+     ((eq 'desktop-number ewmctrl-sort-field)
+      (sort windows-list #'(lambda (e1 e2)
+                             (string<
+                              (cdr (assoc 'desktop-number e1))
+                              (cdr (assoc 'desktop-number e2))))))
+     ((eq 'desktop-number-reversed ewmctrl-sort-field)
+      (sort windows-list #'(lambda (e1 e2)
+                             (string<
+                              (cdr (assoc 'desktop-number e2))
+                              (cdr (assoc 'desktop-number e1))))))
      ((eq 'name ewmctrl-sort-field)
       (sort windows-list #'(lambda (e1 e2)
                              (string<
@@ -153,6 +167,20 @@
                               (cdr (assoc 'pid e1))))))
      (t
       windows-list))))
+
+(defun ewmctrl-sort-by-desktop-number ()
+  "Sort list of desktop windows numerically on the desktop number
+field."
+  (interactive)
+  (setq ewmctrl-sort-field 'desktop-number)
+  (ewmctrl-refresh))
+
+(defun ewmctrl-sort-by-desktop-number-reversed ()
+  "Sort list of desktop windows reverse-numerically on the
+desktop number field."
+  (interactive)
+  (setq ewmctrl-sort-field 'desktop-number-reversed)
+  (ewmctrl-refresh))
 
 (defun ewmctrl-sort-by-name ()
   "Sort list of desktop windows lexicographically on the name field."
@@ -216,10 +244,10 @@ PID field."
     (let ((inhibit-read-only t)
           (window-list (ewmctrl-list-windows)))
       (erase-buffer)
-      (insert (propertize "    PID  Name\n" 'face '(foreground-color . "ForestGreen")))
-      (insert (propertize "  -----  ----\n" 'face '(foreground-color . "ForestGreen")))
+      (insert (propertize "  Desktop    PID  Name\n" 'face '(foreground-color . "ForestGreen")))
+      (insert (propertize "  -------  -----  ----\n" 'face '(foreground-color . "ForestGreen")))
       (dolist (win window-list)
-        (insert (propertize (concat "  " (format "%5s" (cdr (assoc 'pid win))) "  " (cdr (assoc 'title win)) "\n")
+        (insert (propertize (concat "  " (format "%4s" (cdr (assoc 'desktop-number win))) "     " (format "%5s" (cdr (assoc 'pid win))) "  " (cdr (assoc 'title win)) "\n")
                             'window-id (cdr (assoc 'window-id win))
                             'title (cdr (assoc 'title win))))))))
 
@@ -232,6 +260,8 @@ PID field."
   (define-key ewmctrl-mode-map (kbd "g") 'ewmctrl-refresh)
   (define-key ewmctrl-mode-map (kbd "i") 'ewmctrl-change-window-icon-name)
   (define-key ewmctrl-mode-map (kbd "n") 'ewmctrl-change-window-name)
+  (define-key ewmctrl-mode-map (kbd "Sd") 'ewmctrl-sort-by-desktop-number)
+  (define-key ewmctrl-mode-map (kbd "SD") 'ewmctrl-sort-by-desktop-number-reversed)
   (define-key ewmctrl-mode-map (kbd "Sn") 'ewmctrl-sort-by-name)
   (define-key ewmctrl-mode-map (kbd "SN") 'ewmctrl-sort-by-name-reversed)
   (define-key ewmctrl-mode-map (kbd "Sp") 'ewmctrl-sort-by-pid)

@@ -31,6 +31,10 @@ The default keybindings, applicable to the desktop window selected by the line a
 
 * n - Change the name of the selected desktop window (`ewmctrl-change-window-name`).
 
+* Sd - Sort the list of desktop windows numerically by desktop number (`ewmctrl-sort-by-desktop-number`).
+
+* SD - Sort the list of desktop windows reverse-numerically by desktop number (`ewmctrl-sort-by-desktop-number-reversed`).
+
 * Sn - Sort the list of desktop windows lexicographically by name (`ewmctrl-sort-by-name`).
 
 * SN - Sort the list of desktop windows reverse-lexicographically by name (`ewmctrl-sort-by-name-reversed`).
