@@ -31,6 +31,20 @@ The default keybindings, applicable to the desktop window selected by the line a
 
 * n - Change the name of the selected desktop window (`ewmctrl-change-window-name`).
 
+* fc - Remove all filtering (`ewmctrl-filters-clear`).
+
+* fd - Add a filter by desktop number (`ewmctrl-filter-by-desktop-number`).
+
+* fD - Remove all filtering by desktop number (`ewmctrl-filter-desktop-number-clear`).
+
+* fn - Add a filter by window name (`ewmctrl-filter-by-name`).
+
+* fN - Remove all filtering by window name (`ewmctrl-filter-name-clear`).
+
+* fp - Add a filter by PID (`ewmctrl-filter-by-pid`).
+
+* fP - Remove all filtering by PID (`ewmctrl-filter-pid-clear`).
+
 * Sd - Sort the list of desktop windows numerically by desktop number (`ewmctrl-sort-by-desktop-number`).
 
 * SD - Sort the list of desktop windows reverse-numerically by desktop number (`ewmctrl-sort-by-desktop-number-reversed`).

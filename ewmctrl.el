@@ -56,6 +56,20 @@
 
 ;; * n - Change the name of the selected desktop window (`ewmctrl-change-window-name').
 
+;; * fc - Remove all filtering (`ewmctrl-filters-clear').
+
+;; * fd - Add a filter by desktop number (`ewmctrl-filter-by-desktop-number').
+
+;; * fD - Remove all filtering by desktop number (`ewmctrl-filter-desktop-number-clear').
+
+;; * fn - Add a filter by window name (`ewmctrl-filter-by-name').
+
+;; * fN - Remove all filtering by window name (`ewmctrl-filter-name-clear').
+
+;; * fp - Add a filter by PID (`ewmctrl-filter-by-pid').
+
+;; * fP - Remove all filtering by PID (`ewmctrl-filter-pid-clear').
+
 ;; * Sd - Sort the list of desktop windows numerically by desktop number (`ewmctrl-sort-by-desktop-number').
 
 ;; * SD - Sort the list of desktop windows reverse-numerically by desktop number (`ewmctrl-sort-by-desktop-number-reversed').
@@ -112,6 +126,18 @@
   :type '(list desktop-number desktop-number-reversed name name-reversed pid pid-reversed)
   :group 'ewmctrl)
 
+(defvar ewmctrl-filters nil
+  "Alist of filters to apply when displaying list of desktop
+windows.
+
+The alist consists of at most three entries, each of the form
+
+(SYMBOL . LIST)
+
+where SYMBOL is one of `desktop-number', `name' or `pid'. With
+each symbol is associated a list of strings, each string being
+a filter to apply on the field indicated by that symbol.")
+
 
 (defun ewmctrl-list-windows ()
   "Use `wmctrl' to get a list of desktop windows."
@@ -167,6 +193,72 @@
                               (cdr (assoc 'pid e1))))))
      (t
       windows-list))))
+
+(defun ewmctrl-filter-add (field filter)
+  (cond
+   ((eq 'desktop-number field)
+    (let ((current-filter (cdr (assoc 'desktop-number ewmctrl-filters))))
+      (if current-filter
+          (setcdr (assoc 'desktop-number ewmctrl-filters) (cons filter current-filter))
+        (setq ewmctrl-filters (cons `(desktop-number . ,(list filter)) ewmctrl-filters)))))
+   ((eq 'name field)
+    (let ((current-filter (cdr (assoc 'name ewmctrl-filters))))
+      (if current-filter
+          (setcdr (assoc 'name ewmctrl-filters) (cons filter current-filter))
+        (setq ewmctrl-filters (cons `(name . ,(list filter)) ewmctrl-filters)))))
+   ((eq 'pid field)
+    (let ((current-filter (cdr (assoc 'pid ewmctrl-filters))))
+      (if current-filter
+          (setcdr (assoc 'pid ewmctrl-filters) (cons filter current-filter))
+        (setq ewmctrl-filters (cons `(pid . ,(list filter)) ewmctrl-filters)))))
+   (t
+    (error "ewmctrl-filter-add: received unknown value for FIELD"))))
+
+(defun ewmctrl-filter-by-desktop-number (filter)
+  "Add a filter by desktop number."
+  (interactive "sDesktop number: ")
+  (ewmctrl-filter-add 'desktop-number filter)
+  (ewmctrl-refresh))
+
+(defun ewmctrl-filter-by-name (filter)
+  "Add a filter by window name."
+  (interactive "sWindow name: ")
+  (ewmctrl-filter-add 'name filter)
+  (ewmctrl-refresh))
+
+(defun ewmctrl-filter-by-pid (filter)
+  "Add a filter by PID."
+  (interactive "sPID: ")
+  (ewmctrl-filter-add 'pid filter)
+  (ewmctrl-refresh))
+
+(defun ewmctrl-filters-clear ()
+  "Clear all filtering."
+  (interactive)
+  (setq ewmctrl-filters nil)
+  (message "All filters cleared.")
+  (ewmctrl-refresh))
+
+(defun ewmctrl-filter-desktop-number-clear ()
+  "Remove all filtering by desktop number."
+  (interactive)
+  (setq ewmctrl-filters (delq (assoc 'desktop-number ewmctrl-filters) ewmctrl-filters))
+  (message "Desktop number filters cleared.")
+  (ewmctrl-refresh))
+
+(defun ewmctrl-filter-name-clear ()
+  "Remove all filtering by window name."
+  (interactive)
+  (setq ewmctrl-filters (delq (assoc 'name ewmctrl-filters) ewmctrl-filters))
+  (message "Name filters cleared.")
+  (ewmctrl-refresh))
+
+(defun ewmctrl-filter-pid-clear ()
+  "Remove all filtering by PID."
+  (interactive)
+  (setq ewmctrl-filters (delq (assoc 'pid ewmctrl-filters) ewmctrl-filters))
+  (message "PID filters cleared.")
+  (ewmctrl-refresh))
 
 (defun ewmctrl-sort-by-desktop-number ()
   "Sort list of desktop windows numerically on the desktop number
@@ -247,9 +339,23 @@ PID field."
       (insert (propertize "  Desktop    PID  Name\n" 'face '(foreground-color . "ForestGreen")))
       (insert (propertize "  -------  -----  ----\n" 'face '(foreground-color . "ForestGreen")))
       (dolist (win window-list)
-        (insert (propertize (concat "  " (format "%4s" (cdr (assoc 'desktop-number win))) "     " (format "%5s" (cdr (assoc 'pid win))) "  " (cdr (assoc 'title win)) "\n")
-                            'window-id (cdr (assoc 'window-id win))
-                            'title (cdr (assoc 'title win))))))))
+        (if (or (not ewmctrl-filters)
+                (and (if (assoc 'desktop-number ewmctrl-filters)
+                         (member (cdr (assoc 'desktop-number win)) (cdr (assoc 'desktop-number ewmctrl-filters)))
+                       t)
+                     (if (assoc 'name ewmctrl-filters)
+                         (let ((result nil))
+                           (dolist (f (cdr (assoc 'name ewmctrl-filters)))
+                             (if (string-match f (cdr (assoc 'title win)))
+                                 (setq result t)))
+                           result)
+                       t)
+                     (if (assoc 'pid ewmctrl-filters)
+                         (member (cdr (assoc 'pid win)) (cdr (assoc 'pid ewmctrl-filters)))
+                       t)))
+            (insert (propertize (concat "  " (format "%4s" (cdr (assoc 'desktop-number win))) "     " (format "%5s" (cdr (assoc 'pid win))) "  " (cdr (assoc 'title win)) "\n")
+                                'window-id (cdr (assoc 'window-id win))
+                                'title (cdr (assoc 'title win)))))))))
 
 
 (define-derived-mode ewmctrl-mode special-mode "ewmctrl"
@@ -260,6 +366,13 @@ PID field."
   (define-key ewmctrl-mode-map (kbd "g") 'ewmctrl-refresh)
   (define-key ewmctrl-mode-map (kbd "i") 'ewmctrl-change-window-icon-name)
   (define-key ewmctrl-mode-map (kbd "n") 'ewmctrl-change-window-name)
+  (define-key ewmctrl-mode-map (kbd "fc") 'ewmctrl-filters-clear)
+  (define-key ewmctrl-mode-map (kbd "fd") 'ewmctrl-filter-by-desktop-number)
+  (define-key ewmctrl-mode-map (kbd "fD") 'ewmctrl-filter-desktop-number-clear)
+  (define-key ewmctrl-mode-map (kbd "fn") 'ewmctrl-filter-by-name)
+  (define-key ewmctrl-mode-map (kbd "fN") 'ewmctrl-filter-name-clear)
+  (define-key ewmctrl-mode-map (kbd "fp") 'ewmctrl-filter-by-pid)
+  (define-key ewmctrl-mode-map (kbd "fP") 'ewmctrl-filter-pid-clear)
   (define-key ewmctrl-mode-map (kbd "Sd") 'ewmctrl-sort-by-desktop-number)
   (define-key ewmctrl-mode-map (kbd "SD") 'ewmctrl-sort-by-desktop-number-reversed)
   (define-key ewmctrl-mode-map (kbd "Sn") 'ewmctrl-sort-by-name)
