@@ -45,6 +45,8 @@ The default keybindings, applicable to the desktop window selected by the line a
 
 * fP - Remove all filtering by PID (`ewmctrl-filter-pid-clear`).
 
+* p - Put the selected desktop window on a different desktop (`ewmctrl-put-window-on-other-desktop`).
+
 * Sd - Sort the list of desktop windows numerically by desktop number (`ewmctrl-sort-by-desktop-number`).
 
 * SD - Sort the list of desktop windows reverse-numerically by desktop number (`ewmctrl-sort-by-desktop-number-reversed`).

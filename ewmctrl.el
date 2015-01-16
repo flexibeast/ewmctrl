@@ -70,6 +70,8 @@
 
 ;; * fP - Remove all filtering by PID (`ewmctrl-filter-pid-clear').
 
+;; * p - Put the selected desktop window on a different desktop (`ewmctrl-put-window-on-other-desktop').
+
 ;; * Sd - Sort the list of desktop windows numerically by desktop number (`ewmctrl-sort-by-desktop-number').
 
 ;; * SD - Sort the list of desktop windows reverse-numerically by desktop number (`ewmctrl-sort-by-desktop-number-reversed').
@@ -265,6 +267,13 @@ a filter to apply on the field indicated by that symbol.")
   (message "PID filters cleared.")
   (ewmctrl-refresh))
 
+(defun ewmctrl-put-window-on-other-desktop (desktop)
+  "Put desktop window specified by point on a different desktop."
+  (interactive "sDesktop: ")
+  (let ((id (get-text-property (point) 'window-id)))
+    (call-process-shell-command (concat ewmctrl-wmctrl-path " -i -r '" id "' -t '" desktop "'"))
+    (ewmctrl-refresh)))
+
 (defun ewmctrl-sort-by-desktop-number ()
   "Sort list of desktop windows numerically on the desktop number
 field."
@@ -381,6 +390,7 @@ PID field."
   (define-key ewmctrl-mode-map (kbd "fN") 'ewmctrl-filter-name-clear)
   (define-key ewmctrl-mode-map (kbd "fp") 'ewmctrl-filter-by-pid)
   (define-key ewmctrl-mode-map (kbd "fP") 'ewmctrl-filter-pid-clear)
+  (define-key ewmctrl-mode-map (kbd "p") 'ewmctrl-put-window-on-other-desktop)
   (define-key ewmctrl-mode-map (kbd "Sd") 'ewmctrl-sort-by-desktop-number)
   (define-key ewmctrl-mode-map (kbd "SD") 'ewmctrl-sort-by-desktop-number-reversed)
   (define-key ewmctrl-mode-map (kbd "Sn") 'ewmctrl-sort-by-name)
