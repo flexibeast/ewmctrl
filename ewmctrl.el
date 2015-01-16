@@ -52,11 +52,11 @@
 
 ;; * D - Delete the selected desktop window (`ewmctrl-delete-window').
 
-;; * i - Change the icon name of the selected desktop window (`ewmctrl-change-window-icon-name').
+;; * I - Change the icon name of the selected desktop window (`ewmctrl-change-window-icon-name').
 
-;; * n - Change the name of the selected desktop window (`ewmctrl-change-window-name').
+;; * m - Move the selected desktop window to a different desktop (`ewmctrl-move-window-to-other-desktop').
 
-;; * p - Put the selected desktop window on a different desktop (`ewmctrl-put-window-on-other-desktop').
+;; * N - Change the name of the selected desktop window (`ewmctrl-change-window-name').
 
 ;; ### Filtering
 
@@ -91,6 +91,10 @@
 ;; ### General
 
 ;; * g - Refresh the list of desktop windows (`ewmctrl-refresh').
+
+;; * n - Move point to next line (`next-line').
+
+;; * p - Move point to previous line (`previous-line').
 
 ;; Customisation options are available via the `ewmctrl' customize-group.
 
@@ -275,8 +279,8 @@ a filter to apply on the field indicated by that symbol.")
   (message "PID filters cleared.")
   (ewmctrl-refresh))
 
-(defun ewmctrl-put-window-on-other-desktop (desktop)
-  "Put desktop window specified by point on a different desktop."
+(defun ewmctrl-move-window-to-other-desktop (desktop)
+  "Move desktop window specified by point to a different desktop."
   (interactive "sDesktop: ")
   (let ((id (get-text-property (point) 'window-id)))
     (call-process-shell-command (concat ewmctrl-wmctrl-path " -i -r '" id "' -t '" desktop "'"))
@@ -389,8 +393,7 @@ PID field."
   (define-key ewmctrl-mode-map (kbd "RET") 'ewmctrl-focus-window)
   (define-key ewmctrl-mode-map (kbd "D") 'ewmctrl-delete-window)
   (define-key ewmctrl-mode-map (kbd "g") 'ewmctrl-refresh)
-  (define-key ewmctrl-mode-map (kbd "i") 'ewmctrl-change-window-icon-name)
-  (define-key ewmctrl-mode-map (kbd "n") 'ewmctrl-change-window-name)
+  (define-key ewmctrl-mode-map (kbd "I") 'ewmctrl-change-window-icon-name)  
   (define-key ewmctrl-mode-map (kbd "fc") 'ewmctrl-filters-clear)
   (define-key ewmctrl-mode-map (kbd "fd") 'ewmctrl-filter-by-desktop-number)
   (define-key ewmctrl-mode-map (kbd "fD") 'ewmctrl-filter-desktop-number-clear)
@@ -398,7 +401,10 @@ PID field."
   (define-key ewmctrl-mode-map (kbd "fN") 'ewmctrl-filter-name-clear)
   (define-key ewmctrl-mode-map (kbd "fp") 'ewmctrl-filter-by-pid)
   (define-key ewmctrl-mode-map (kbd "fP") 'ewmctrl-filter-pid-clear)
-  (define-key ewmctrl-mode-map (kbd "p") 'ewmctrl-put-window-on-other-desktop)
+  (define-key ewmctrl-mode-map (kbd "m") 'ewmctrl-move-window-to-other-desktop)
+  (define-key ewmctrl-mode-map (kbd "n") 'next-line)
+  (define-key ewmctrl-mode-map (kbd "N") 'ewmctrl-change-window-name)
+  (define-key ewmctrl-mode-map (kbd "p") 'previous-line)
   (define-key ewmctrl-mode-map (kbd "Sd") 'ewmctrl-sort-by-desktop-number)
   (define-key ewmctrl-mode-map (kbd "SD") 'ewmctrl-sort-by-desktop-number-reversed)
   (define-key ewmctrl-mode-map (kbd "Sn") 'ewmctrl-sort-by-name)

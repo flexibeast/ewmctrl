@@ -1,4 +1,4 @@
-# ewmctrl - use `wmctrl` to manage desktop windows
+# ewmctrl - Use `wmctrl` to manage desktop windows
 
 *Author:* Alexis <flexibeast@gmail.com><br>
 
@@ -27,11 +27,11 @@ The default keybindings are:
 
 * D - Delete the selected desktop window (`ewmctrl-delete-window`).
 
-* i - Change the icon name of the selected desktop window (`ewmctrl-change-window-icon-name`).
+* I - Change the icon name of the selected desktop window (`ewmctrl-change-window-icon-name`).
 
-* n - Change the name of the selected desktop window (`ewmctrl-change-window-name`).
+* m - Move the selected desktop window to a different desktop (`ewmctrl-move-window-to-other-desktop`).
 
-* p - Put the selected desktop window on a different desktop (`ewmctrl-put-window-on-other-desktop`).
+* N - Change the name of the selected desktop window (`ewmctrl-change-window-name`).
 
 ### Filtering
 
@@ -66,6 +66,10 @@ The default keybindings are:
 ### General
 
 * g - Refresh the list of desktop windows (`ewmctrl-refresh`).
+
+* n - Move point to next line (`next-line`).
+
+* p - Move point to previous line (`previous-line`).
 
 Customisation options are available via the `ewmctrl` customize-group.
 
