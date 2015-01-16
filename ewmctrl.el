@@ -126,6 +126,11 @@
   :type '(list desktop-number desktop-number-reversed name name-reversed pid pid-reversed)
   :group 'ewmctrl)
 
+(defcustom ewmctrl-include-sticky-windows nil
+  "Whether to include sticky windows in window list."
+  :type 'boolean
+  :group 'ewmctrl)
+
 (defvar ewmctrl-filters nil
   "Alist of filters to apply when displaying list of desktop
 windows.
@@ -339,20 +344,23 @@ PID field."
       (insert (propertize "  Desktop    PID  Name\n" 'face '(foreground-color . "ForestGreen")))
       (insert (propertize "  -------  -----  ----\n" 'face '(foreground-color . "ForestGreen")))
       (dolist (win window-list)
-        (if (or (not ewmctrl-filters)
-                (and (if (assoc 'desktop-number ewmctrl-filters)
-                         (member (cdr (assoc 'desktop-number win)) (cdr (assoc 'desktop-number ewmctrl-filters)))
-                       t)
-                     (if (assoc 'name ewmctrl-filters)
-                         (let ((result nil))
-                           (dolist (f (cdr (assoc 'name ewmctrl-filters)))
-                             (if (string-match f (cdr (assoc 'title win)))
-                                 (setq result t)))
-                           result)
-                       t)
-                     (if (assoc 'pid ewmctrl-filters)
-                         (member (cdr (assoc 'pid win)) (cdr (assoc 'pid ewmctrl-filters)))
-                       t)))
+        (if (and (or ewmctrl-include-sticky-windows
+                     (and (not ewmctrl-include-sticky-windows)
+                          (not (string= "-1" (cdr (assoc 'desktop-number win))))))
+                 (or (not ewmctrl-filters)
+                     (and (if (assoc 'desktop-number ewmctrl-filters)
+                              (member (cdr (assoc 'desktop-number win)) (cdr (assoc 'desktop-number ewmctrl-filters)))
+                            t)
+                          (if (assoc 'name ewmctrl-filters)
+                              (let ((result nil))
+                                (dolist (f (cdr (assoc 'name ewmctrl-filters)))
+                                  (if (string-match f (cdr (assoc 'title win)))
+                                      (setq result t)))
+                                result)
+                            t)
+                          (if (assoc 'pid ewmctrl-filters)
+                              (member (cdr (assoc 'pid win)) (cdr (assoc 'pid ewmctrl-filters)))
+                            t))))
             (insert (propertize (concat "  " (format "%4s" (cdr (assoc 'desktop-number win))) "     " (format "%5s" (cdr (assoc 'pid win))) "  " (cdr (assoc 'title win)) "\n")
                                 'window-id (cdr (assoc 'window-id win))
                                 'title (cdr (assoc 'title win)))))))))
