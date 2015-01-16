@@ -1,6 +1,6 @@
-;;; ewmctrl.el --- use `wmctrl' to manage desktop windows.
+;;; ewmctrl.el --- Use `wmctrl' to manage desktop windows.
 
-;; Copyright (C) 2014  Alexis <flexibeast@gmail.com>
+;; Copyright (C) 2015  Alexis <flexibeast@gmail.com>
 
 ;; Author: Alexis <flexibeast@gmail.com>
 ;; Maintainer: Alexis <flexibeast@gmail.com>
@@ -44,17 +44,21 @@
 
 ;; Create an `ewmctrl' buffer with `M-x ewmctrl'.
 
-;; The default keybindings, applicable to the desktop window selected by the line at point, are:
+;; The default keybindings are:
+
+;; ### Window actions
 
 ;; * RET - Switch to the selected desktop window (`ewmctrl-focus-window').
 
 ;; * D - Delete the selected desktop window (`ewmctrl-delete-window').
 
-;; * g - Refresh the list of desktop windows (`ewmctrl-refresh').
-
 ;; * i - Change the icon name of the selected desktop window (`ewmctrl-change-window-icon-name').
 
 ;; * n - Change the name of the selected desktop window (`ewmctrl-change-window-name').
+
+;; * p - Put the selected desktop window on a different desktop (`ewmctrl-put-window-on-other-desktop').
+
+;; ### Filtering
 
 ;; * fc - Remove all filtering (`ewmctrl-filters-clear').
 
@@ -70,7 +74,7 @@
 
 ;; * fP - Remove all filtering by PID (`ewmctrl-filter-pid-clear').
 
-;; * p - Put the selected desktop window on a different desktop (`ewmctrl-put-window-on-other-desktop').
+;; ### Sorting
 
 ;; * Sd - Sort the list of desktop windows numerically by desktop number (`ewmctrl-sort-by-desktop-number').
 
@@ -83,6 +87,10 @@
 ;; * Sp - Sort the list of desktop windows numerically by PID (`ewmctrl-sort-by-pid').
 
 ;; * SP - Sort the list of desktop windows reverse-numercially by PID (`ewmctrl-sort-by-pid-reversed').
+
+;; ### General
+
+;; * g - Refresh the list of desktop windows (`ewmctrl-refresh').
 
 ;; Customisation options are available via the `ewmctrl' customize-group.
 
