@@ -56,6 +56,8 @@
 
 ;; * m - Move the selected desktop window to a different desktop (`ewmctrl-move-window-to-other-desktop').
 
+;; * M - Move the selected desktop window to the current desktop, raise it, and give it focus (`ewmctrl-move-window-to-current-desktop-and-focus').
+
 ;; * N - Change the name of the selected desktop window (`ewmctrl-change-window-name').
 
 ;; ### Filtering
@@ -286,6 +288,14 @@ a filter to apply on the field indicated by that symbol.")
     (call-process-shell-command (concat ewmctrl-wmctrl-path " -i -r '" id "' -t '" desktop "'"))
     (ewmctrl-refresh)))
 
+(defun ewmctrl-move-window-to-current-desktop-and-focus ()
+  "Move desktop window specified by point to current desktop,
+raise it and give it focus."
+  (interactive)
+  (let ((id (get-text-property (point) 'window-id)))
+    (call-process-shell-command (concat ewmctrl-wmctrl-path " -i -R '" id "'"))
+    (ewmctrl-refresh)))
+
 (defun ewmctrl-sort-by-desktop-number ()
   "Sort list of desktop windows numerically on the desktop number
 field."
@@ -402,6 +412,7 @@ PID field."
   (define-key ewmctrl-mode-map (kbd "fp") 'ewmctrl-filter-by-pid)
   (define-key ewmctrl-mode-map (kbd "fP") 'ewmctrl-filter-pid-clear)
   (define-key ewmctrl-mode-map (kbd "m") 'ewmctrl-move-window-to-other-desktop)
+  (define-key ewmctrl-mode-map (kbd "M") 'ewmctrl-move-window-to-current-desktop-and-focus)
   (define-key ewmctrl-mode-map (kbd "n") 'next-line)
   (define-key ewmctrl-mode-map (kbd "N") 'ewmctrl-change-window-name)
   (define-key ewmctrl-mode-map (kbd "p") 'previous-line)

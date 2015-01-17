@@ -31,6 +31,8 @@ The default keybindings are:
 
 * m - Move the selected desktop window to a different desktop (`ewmctrl-move-window-to-other-desktop`).
 
+* M - Move the selected desktop window to the current desktop, raise it, and give it focus (`ewmctrl-move-window-to-current-desktop-and-focus`).
+
 * N - Change the name of the selected desktop window (`ewmctrl-change-window-name`).
 
 ### Filtering
