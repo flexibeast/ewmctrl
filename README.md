@@ -35,6 +35,8 @@ The default keybindings are:
 
 * N - Change the name of the selected desktop window (`ewmctrl-change-window-name`).
 
+* r - Resize the selected desktop window by specifying dimensions in the minibuffer (`ewmctrl-resize-window`). Whilst in the minibuffer, use TAB and S-TAB to move within and between the width and height fields, and use C-RET to preview the currently specified dimensions.
+
 ### Filtering
 
 * fc - Remove all filtering (`ewmctrl-filters-clear`).

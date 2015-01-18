@@ -60,6 +60,8 @@
 
 ;; * N - Change the name of the selected desktop window (`ewmctrl-change-window-name').
 
+;; * r - Resize the selected desktop window by specifying dimensions in the minibuffer (`ewmctrl-resize-window'). Whilst in the minibuffer, use TAB and S-TAB to move within and between the width and height fields, and use C-RET to preview the currently specified dimensions.
+
 ;; ### Filtering
 
 ;; * fc - Remove all filtering (`ewmctrl-filters-clear').
@@ -342,14 +344,102 @@ PID field."
   (let ((id (get-text-property (point) 'window-id)))
     (call-process-shell-command (concat ewmctrl-wmctrl-path " -i -a '" id "'"))))
 
-(defun ewmctrl-delete-window ()
-  "Delete desktop window specified at point."
-  (interactive)
-  (let ((id (get-text-property (point) 'window-id)))
-    (if (yes-or-no-p (concat "Delete window '" (get-text-property (point) 'title) "'? "))
-        (progn
-          (call-process-shell-command (concat ewmctrl-wmctrl-path " -i -c '" id "'"))
-          (ewmctrl-refresh)))))
+(defun ewmctrl-resize-window (size)
+  "Resize desktop window specified at point."
+  (interactive
+   (let* ((inhibit-point-motion-hooks nil)
+          (keymap (copy-keymap minibuffer-local-map))
+          (prompt "Resize window to")
+          (width-text " width")
+          (height-text "height")
+          (space-plus-height-text (concat " " height-text))
+          (id (get-text-property (point) 'window-id))
+          (width (get-text-property (point) 'width))
+          (height (get-text-property (point) 'height))
+          (current-size
+           (concat
+            (propertize width-text 'face 'minibuffer-prompt 'intangible t 'read-only t)
+            (propertize " " 'intangible t 'read-only t 'rear-nonsticky t)
+            (propertize width 'read-only nil)
+            (propertize " " 'read-only t)
+            (propertize height-text 'face 'minibuffer-prompt 'intangible t 'read-only t)
+            (propertize " " 'intangible t 'read-only t 'rear-nonsticky t)
+            (propertize height 'read-only nil))))
+     (define-key keymap [tab]
+       #'(lambda ()
+           (interactive)
+           (cond
+            ((looking-at (concat "[0-9]+" space-plus-height-text))
+             (re-search-forward "[0-9]+"))
+            ((looking-at space-plus-height-text)
+             (progn
+               (re-search-forward "[0-9]")
+               (re-search-backward "[0-9]")))
+            ((looking-at "[0-9]+$")
+             (re-search-forward "$")))))
+     (define-key keymap [backtab]
+       #'(lambda ()
+           (interactive)
+           (cond
+            ((looking-at "$")
+             (progn
+               (re-search-backward (concat space-plus-height-text " [0-9]+"))
+               (re-search-forward space-plus-height-text)))
+            ((looking-at "[0-9]+$")
+             (re-search-backward space-plus-height-text))
+            ((looking-at space-plus-height-text)
+             (progn
+               (re-search-backward (concat width-text " [0-9]"))
+               (re-search-forward width-text))))))
+     (define-key keymap [C-return]
+       #'(lambda ()
+           (interactive)
+           (let* ((text (buffer-string))
+                  (width (progn
+                           (string-match "width \\([0-9]+\\)" text)
+                           (match-string 1 text)))
+                  (height (progn
+                            (string-match "height \\([0-9]+\\)$" text)
+                            (match-string 1 text))))
+             (call-process-shell-command (concat ewmctrl-wmctrl-path " -i -r '" id "' -e '0,-1,-1," width "," height "'"))
+             (ewmctrl-refresh))))
+     (define-key keymap [left]
+       #'(lambda ()
+           (interactive)
+           (if (not (looking-back "width "))
+               (left-char))))
+     (define-key keymap (kbd "DEL")
+       #'(lambda ()
+           (interactive)
+           (if (not (looking-back "width "))
+               (delete-char -1))))
+     (list
+      (read-from-minibuffer (propertize prompt 'intangible t) current-size keymap))))
+  (let ((id (get-text-property (point) 'window-id))
+        (width (progn
+                 (string-match "width \\([0-9]+\\)" size)
+                 (match-string 1 size)))
+        (height (progn
+                  (string-match "height \\([0-9]+\\)$" size)
+                  (match-string 1 size))))
+    ;; man ewmctrl(1) states:
+    ;;
+    ;; "The first value, g, is the gravity of the window, with 0
+    ;;  being the most common value (the default value for the window)
+    ;;  ...
+    ;;  -1 in any position is interpreted to mean that the current
+    ;;  geometry value should not be modified."
+    (call-process-shell-command (concat ewmctrl-wmctrl-path " -i -r '" id "' -e '0,-1,-1," width "," height "'"))
+    (ewmctrl-refresh)))
+
+  (defun ewmctrl-delete-window ()
+    "Delete desktop window specified at point."
+    (interactive)
+    (let ((id (get-text-property (point) 'window-id)))
+      (if (yes-or-no-p (concat "Delete window '" (get-text-property (point) 'title) "'? "))
+          (progn
+            (call-process-shell-command (concat ewmctrl-wmctrl-path " -i -c '" id "'"))
+            (ewmctrl-refresh)))))
 
 (defun ewmctrl-change-window-name (name)
   "Change name of desktop window specified at point."
@@ -394,7 +484,9 @@ PID field."
                             t))))
             (insert (propertize (concat "  " (format "%4s" (cdr (assoc 'desktop-number win))) "     " (format "%5s" (cdr (assoc 'pid win))) "  " (cdr (assoc 'title win)) "\n")
                                 'window-id (cdr (assoc 'window-id win))
-                                'title (cdr (assoc 'title win)))))))))
+                                'title (cdr (assoc 'title win))
+                                'width (cdr (assoc 'width win))
+                                'height (cdr (assoc 'height win)))))))))
 
 
 (define-derived-mode ewmctrl-mode special-mode "ewmctrl"
@@ -416,6 +508,7 @@ PID field."
   (define-key ewmctrl-mode-map (kbd "n") 'next-line)
   (define-key ewmctrl-mode-map (kbd "N") 'ewmctrl-change-window-name)
   (define-key ewmctrl-mode-map (kbd "p") 'previous-line)
+  (define-key ewmctrl-mode-map (kbd "r") 'ewmctrl-resize-window)
   (define-key ewmctrl-mode-map (kbd "Sd") 'ewmctrl-sort-by-desktop-number)
   (define-key ewmctrl-mode-map (kbd "SD") 'ewmctrl-sort-by-desktop-number-reversed)
   (define-key ewmctrl-mode-map (kbd "Sn") 'ewmctrl-sort-by-name)
