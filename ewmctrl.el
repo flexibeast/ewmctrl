@@ -433,14 +433,14 @@ PID field."
     (call-process-shell-command (concat ewmctrl-wmctrl-path " -i -r '" id "' -e '0,-1,-1," width "," height "'"))
     (ewmctrl-refresh)))
 
-  (defun ewmctrl-delete-window ()
-    "Delete desktop window specified at point."
-    (interactive)
-    (let ((id (get-text-property (point) 'window-id)))
-      (if (yes-or-no-p (concat "Delete window '" (get-text-property (point) 'title) "'? "))
-          (progn
-            (call-process-shell-command (concat ewmctrl-wmctrl-path " -i -c '" id "'"))
-            (ewmctrl-refresh)))))
+(defun ewmctrl-delete-window ()
+  "Delete desktop window specified at point."
+  (interactive)
+  (let ((id (get-text-property (point) 'window-id)))
+    (if (yes-or-no-p (concat "Delete window '" (get-text-property (point) 'title) "'? "))
+        (progn
+          (call-process-shell-command (concat ewmctrl-wmctrl-path " -i -c '" id "'"))
+          (ewmctrl-refresh)))))
 
 (defun ewmctrl-change-window-name (name)
   "Change name of desktop window specified at point."
