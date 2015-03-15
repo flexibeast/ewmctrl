@@ -5,6 +5,7 @@
 ;; Author: Alexis <flexibeast@gmail.com>
 ;; Maintainer: Alexis <flexibeast@gmail.com>
 ;; Created: 2015-01-08
+;; URL: https://github.com/flexibeast/ewmctrl
 ;; Keywords: desktop, windows
 
 ;;
