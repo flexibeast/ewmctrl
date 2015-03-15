@@ -126,6 +126,8 @@
 ;;; Code:
 
 
+;; Customisable variables.
+
 (defgroup ewmctrl nil
   "Emacs interface to `wmctrl'."
   :group 'external)
@@ -133,11 +135,6 @@
 (defcustom ewmctrl-wmctrl-path "/usr/bin/wmctrl"
   "Absolute path of `wmctrl' executable."
   :type '(file :must-match t)
-  :group 'ewmctrl)
-
-(defcustom ewmctrl-wmctrl-switches "-lpG"
-  "Switches to pass to `wmctrl' executable."
-  :type 'string
   :group 'ewmctrl)
 
 (defcustom ewmctrl-sort-field 'name
@@ -149,6 +146,13 @@
   "Whether to include sticky windows in window list."
   :type 'boolean
   :group 'ewmctrl)
+
+;; Internal variables.
+
+(defvar ewmctrl-field-count 9
+  "Number of fields output by `wmctrl' when run with the
+switches specified by the value of the variable
+`ewmctrl-wmctrl-switches'.")
 
 (defvar ewmctrl-filters nil
   "Alist of filters to apply when displaying list of desktop
@@ -162,15 +166,25 @@ where SYMBOL is one of `desktop-number', `name' or `pid'. With
 each symbol is associated a list of strings, each string being
 a filter to apply on the field indicated by that symbol.")
 
+(defvar ewmctrl-wmctrl-switches "-lpG"
+  "Switches to pass to `wmctrl' executable.
+
+Modifying the value of this variable might require modification
+of the variable `ewmctrl-field-count'.")
+
+;; Functions.
 
 (defun ewmctrl-list-windows ()
   "Use `wmctrl' to get a list of desktop windows."
   (let ((bfr (generate-new-buffer " *ewmctrl-output*"))
+        (fields-re (concat "^"
+                           (mapconcat 'identity (make-list (1- ewmctrl-field-count) "\\(\\S-+\\)\\s-+") "")
+                           "\\(.+\\)"))
         (windows-list '()))
     (call-process-shell-command (concat ewmctrl-wmctrl-path " " ewmctrl-wmctrl-switches) nil bfr)
     (with-current-buffer bfr
       (goto-char (point-min))
-      (while (re-search-forward "^\\(\\S-+\\)\\s-+\\(\\S-+\\)\\s-+\\(\\S-+\\)\\s-+\\(\\S-+\\)\\s-+\\(\\S-+\\)\\s-+\\(\\S-+\\)\\s-+\\(\\S-+\\)\\s-+\\(\\S-+\\)\\s-+\\(.+\\)" nil t)
+      (while (re-search-forward fields-re nil t)
         (setq windows-list
               (append windows-list
                       (list
