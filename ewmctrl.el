@@ -422,7 +422,7 @@ PID field."
         (height (progn
                   (string-match "height \\([0-9]+\\)$" size)
                   (match-string 1 size))))
-    ;; man ewmctrl(1) states:
+    ;; man wmctrl(1) states:
     ;;
     ;; "The first value, g, is the gravity of the window, with 0
     ;;  being the most common value (the default value for the window)
