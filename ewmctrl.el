@@ -365,28 +365,24 @@ PID field."
    (let* ((inhibit-point-motion-hooks nil)
           (keymap (copy-keymap minibuffer-local-map))
           (prompt "Resize window to")
-          (width-text " width")
-          (height-text "height")
-          (space-plus-height-text (concat " " height-text))
+          (width-text " width ")
+          (height-text " height ")
           (id (get-text-property (point) 'window-id))
           (width (get-text-property (point) 'width))
           (height (get-text-property (point) 'height))
           (current-size
            (concat
-            (propertize width-text 'face 'minibuffer-prompt 'intangible t 'read-only t)
-            (propertize " " 'intangible t 'read-only t 'rear-nonsticky t)
+            (propertize width-text 'face 'minibuffer-prompt 'read-only t)
             (propertize width 'read-only nil)
-            (propertize " " 'read-only t)
-            (propertize height-text 'face 'minibuffer-prompt 'intangible t 'read-only t)
-            (propertize " " 'intangible t 'read-only t 'rear-nonsticky t)
+            (propertize height-text 'face 'minibuffer-prompt 'read-only t)
             (propertize height 'read-only nil))))
      (define-key keymap [tab]
        #'(lambda ()
            (interactive)
            (cond
-            ((looking-at (concat "[0-9]+" space-plus-height-text))
+            ((looking-at (concat "[0-9]+" height-text))
              (re-search-forward "[0-9]+"))
-            ((looking-at space-plus-height-text)
+            ((looking-at height-text)
              (progn
                (re-search-forward "[0-9]")
                (re-search-backward "[0-9]")))
@@ -398,54 +394,65 @@ PID field."
            (cond
             ((looking-at "$")
              (progn
-               (re-search-backward (concat space-plus-height-text " [0-9]+"))
-               (re-search-forward space-plus-height-text)))
+               (re-search-backward (concat height-text "[0-9]+"))
+               (re-search-forward height-text)))
             ((looking-at "[0-9]+$")
-             (re-search-backward space-plus-height-text))
-            ((looking-at space-plus-height-text)
+             (re-search-backward height-text))
+            ((looking-at height-text)
              (progn
-               (re-search-backward (concat width-text " [0-9]"))
+               (re-search-backward (concat width-text "[0-9]"))
                (re-search-forward width-text))))))
      (define-key keymap [C-return]
        #'(lambda ()
            (interactive)
            (let* ((text (buffer-string))
                   (width (progn
-                           (string-match "width \\([0-9]+\\)" text)
+                           (string-match (concat width-text "\\([0-9]+\\)") text)
                            (match-string 1 text)))
                   (height (progn
-                            (string-match "height \\([0-9]+\\)$" text)
+                            (string-match (concat height-text "\\([0-9]+\\)$") text)
                             (match-string 1 text))))
              (call-process-shell-command (concat ewmctrl-wmctrl-path " -i -r '" id "' -e '0,-1,-1," width "," height "'"))
              (ewmctrl-refresh))))
      (define-key keymap [left]
        #'(lambda ()
            (interactive)
-           (if (not (looking-back "width "))
-               (left-char))))
+           (cond
+            ((looking-back height-text)
+             (left-char (length height-text)))
+            ((not (looking-back width-text))
+             (left-char)))))
+     (define-key keymap [right]
+       #'(lambda ()
+           (interactive)
+           (cond
+            ((looking-at height-text)
+             (right-char (length height-text)))
+            ((not (looking-at "$"))
+             (right-char)))))
      (define-key keymap (kbd "DEL")
        #'(lambda ()
            (interactive)
-           (if (not (looking-back "width "))
+           (if (not (looking-back width-text))
                (delete-char -1))))
      (list
-      (read-from-minibuffer (propertize prompt 'intangible t) current-size keymap))))
-  (let ((id (get-text-property (point) 'window-id))
-        (width (progn
-                 (string-match "width \\([0-9]+\\)" size)
-                 (match-string 1 size)))
-        (height (progn
-                  (string-match "height \\([0-9]+\\)$" size)
-                  (match-string 1 size))))
-    ;; man wmctrl(1) states:
-    ;;
-    ;; "The first value, g, is the gravity of the window, with 0
-    ;;  being the most common value (the default value for the window)
-    ;;  ...
-    ;;  -1 in any position is interpreted to mean that the current
-    ;;  geometry value should not be modified."
-    (call-process-shell-command (concat ewmctrl-wmctrl-path " -i -r '" id "' -e '0,-1,-1," width "," height "'"))
-    (ewmctrl-refresh)))
+      (read-from-minibuffer prompt current-size keymap)))
+   (let ((id (get-text-property (point) 'window-id))
+         (width (progn
+                  (string-match "width \\([0-9]+\\)" size)
+                  (match-string 1 size)))
+         (height (progn
+                   (string-match "height \\([0-9]+\\)$" size)
+                   (match-string 1 size))))
+     ;; man wmctrl(1) states:
+     ;;
+     ;; "The first value, g, is the gravity of the window, with 0
+     ;;  being the most common value (the default value for the window)
+     ;;  ...
+     ;;  -1 in any position is interpreted to mean that the current
+     ;;  geometry value should not be modified."
+     (call-process-shell-command (concat ewmctrl-wmctrl-path " -i -r '" id "' -e '0,-1,-1," width "," height "'"))
+     (ewmctrl-refresh))))
 
 (defun ewmctrl-delete-window ()
   "Delete desktop window specified at point."
