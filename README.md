@@ -1,5 +1,7 @@
 # ewmctrl - Use `wmctrl` to manage desktop windows
 
+[![Join the chat at https://gitter.im/flexibeast/ewmctrl](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/flexibeast/ewmctrl?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 *Author:* Alexis <flexibeast@gmail.com><br>
 
 `ewmctrl` provides an Emacs interface to the `wmctrl` command-line window-management program.
