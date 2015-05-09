@@ -1,6 +1,7 @@
 # ewmctrl - Use `wmctrl` to manage desktop windows
 
 *Author:* Alexis <flexibeast@gmail.com><br>
+*URL:* [https://github.com/flexibeast/ewmctrl](https://github.com/flexibeast/ewmctrl)<br>
 
 `ewmctrl` provides an Emacs interface to the `wmctrl` command-line window-management program.
 
@@ -36,6 +37,8 @@ The default keybindings are:
 * N - Change the name of the selected desktop window (`ewmctrl-change-window-name`).
 
 * r - Resize the selected desktop window by specifying dimensions in the minibuffer (`ewmctrl-resize-window`). Whilst in the minibuffer, use TAB and S-TAB to move within and between the width and height fields, and use C-RET to preview the currently specified dimensions.
+
+* SPC *[key]* *[action]* - Select window specified by *[key]* and perform *[action]* on it, where *[action]* is an action keybinding. For example, <kbd>SPC a RET</kbd> will switch to the desktop window designated by 'a', whilst <kbd>SPC c D</kbd> will delete the desktop window designated by 'c'.
 
 ### Filtering
 

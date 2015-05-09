@@ -63,6 +63,8 @@
 
 ;; * r - Resize the selected desktop window by specifying dimensions in the minibuffer (`ewmctrl-resize-window'). Whilst in the minibuffer, use TAB and S-TAB to move within and between the width and height fields, and use C-RET to preview the currently specified dimensions.
 
+;; * SPC [key] [action] - Select window specified by [key] and perform [action] on it, where [action] is an action keybinding. For example, SPC a RET will switch to the desktop window designated by 'a', whilst SPC c D will delete the desktop window designated by 'c'.
+
 ;; ### Filtering
 
 ;; * fc - Remove all filtering (`ewmctrl-filters-clear').
@@ -166,16 +168,133 @@ where SYMBOL is one of `desktop-number', `name' or `pid'. With
 each symbol is associated a list of strings, each string being
 a filter to apply on the field indicated by that symbol.")
 
+(defvar ewmctrl-mode-map (make-sparse-keymap)
+  "Keymap for `ewmctrl-mode'.")
+
+(defvar ewmctrl-window-id-keybind-alist `(("0x00000000" . ,(string (decode-char 'unicode #xfffd))))
+  "Alist of window IDs and the keybinds associated with them.
+
+Initial value is a dummy value, using the Unicode 'REPLACEMENT
+CHARACTER', to simplify the logic of the function
+`ewmctrl--assign-key'.")
+
 (defvar ewmctrl-wmctrl-switches "-lpG"
   "Switches to pass to `wmctrl' executable.
 
 Modifying the value of this variable might require modification
 of the variable `ewmctrl-field-count'.")
 
-;; Functions.
 
-(defun ewmctrl-list-windows ()
-  "Use `wmctrl' to get a list of desktop windows."
+;; Internal functions.
+
+(defun ewmctrl--assign-key ()
+  "Internal function to return a new key to refer to a specific
+window."
+  ;; Unicode ASCII a -> z == 0x0061 -> 0x007A
+  (let ((current-char #x0061)
+        (chosen-char nil))
+    (while (and (not chosen-char)
+                (< current-char #x007B))
+      (if (rassoc (string (decode-char 'unicode current-char)) ewmctrl-window-id-keybind-alist)
+          (setq current-char (1+ current-char))
+        (progn
+          (setq chosen-char (string (decode-char 'unicode current-char)))
+          (define-key ewmctrl-mode-map
+            (kbd (concat "SPC " chosen-char))
+            (eval `(lambda ()
+                     (interactive)
+                     (ewmctrl--dispatch-action ,chosen-char)))))))
+    chosen-char))
+
+(defun ewmctrl--change-window-icon-name-by-id (id)
+  "Internal function to change the icon name of the window
+specified by ID."
+  (let ((name (read-string "New window icon name: ")))
+    (call-process-shell-command (concat ewmctrl-wmctrl-path " -i -r '" id "' -I '" name "'"))
+    (ewmctrl-refresh)))
+
+
+(defun ewmctrl--change-window-name-by-id (id)
+  "Internal function to change the name of the window
+specified by ID."
+  (let ((name (read-string "New window name: ")))
+    (call-process-shell-command (concat ewmctrl-wmctrl-path " -i -r '" id "' -N '" name "'"))
+    (ewmctrl-refresh)))
+
+(defun ewmctrl--close-window-by-id (id)
+  "Internal function to close the window specified by ID."
+  (if (yes-or-no-p (concat "Delete window '" (ewmctrl--get-window-property-via-id id 'title) "'? "))
+      (progn
+        (call-process-shell-command (concat ewmctrl-wmctrl-path " -i -c '" id "'"))
+        (define-key ewmctrl-mode-map
+          (kbd (concat "SPC " (cdr (assoc id ewmctrl-window-id-keybind-alist))))
+          (lambda ()
+            (interactive)))
+        (setq ewmctrl-window-id-keybind-alist (delq (assoc id ewmctrl-window-id-keybind-alist) ewmctrl-window-id-keybind-alist))
+        (ewmctrl-refresh))))
+
+(defun ewmctrl--dispatch-action (key)
+  "Internal function to perform action on window specified
+by KEY."
+  (let ((char (read-char nil t)))
+    (cond
+     ((= 13 char) ; RET
+      (ewmctrl-focus-window key))
+     ((= 68 char) ; D
+      (ewmctrl-delete-window key))
+     ((= 73 char) ; I
+      (ewmctrl-change-window-icon-name key))
+     ((= 77 char) ; M
+      (ewmctrl-move-window-to-current-desktop-and-focus key))
+     ((= 78 char) ; N
+      (ewmctrl-change-window-name key))
+     ((= 109 char) ; m
+      (ewmctrl-move-window-to-other-desktop key))
+     ((= 114 char) ; r
+      (ewmctrl-resize-window key))
+     (t
+      (user-error (concat "ewmctrl--dispatch-action: don't know how to handle character " (number-to-string char)))))))
+
+(defun ewmctrl--filter-add (field filter)
+  "Internal function to add FILTER on FIELD."
+  (cond
+   ((eq 'desktop-number field)
+    (let ((current-filter (cdr (assoc 'desktop-number ewmctrl-filters))))
+      (if current-filter
+          (setcdr (assoc 'desktop-number ewmctrl-filters) (cons filter current-filter))
+        (setq ewmctrl-filters (cons `(desktop-number . ,(list filter)) ewmctrl-filters)))))
+   ((eq 'name field)
+    (let ((current-filter (cdr (assoc 'name ewmctrl-filters))))
+      (if current-filter
+          (setcdr (assoc 'name ewmctrl-filters) (cons filter current-filter))
+        (setq ewmctrl-filters (cons `(name . ,(list filter)) ewmctrl-filters)))))
+   ((eq 'pid field)
+    (let ((current-filter (cdr (assoc 'pid ewmctrl-filters))))
+      (if current-filter
+          (setcdr (assoc 'pid ewmctrl-filters) (cons filter current-filter))
+        (setq ewmctrl-filters (cons `(pid . ,(list filter)) ewmctrl-filters)))))
+   (t
+    (error "ewmctrl-filter-add: received unknown value for FIELD"))))
+
+(defun ewmctrl--focus-window-by-id (id)
+  "Internal function to focus the desktop window specified
+by ID."
+  (call-process-shell-command (concat ewmctrl-wmctrl-path " -i -a '" id "'")))
+
+(defun ewmctrl--get-window-property-via-id (id property)
+  "Internal function to get PROPERTY of window specified
+by ID."
+  (let ((window-list (ewmctrl--list-windows))
+        (property-value ""))
+    (dolist (win window-list)
+      (if (string= id (cdr (assoc 'window-id win)))
+          (setq property-value (cdr (assoc property win)))))
+    (if (string= "" property-value)
+        (error (concat "ewmctrl--get-window-property-via-id: no window found for ID " id)))
+    property-value))
+
+(defun ewmctrl--list-windows ()
+  "Internal function to get a list of desktop windows via `wmctrl'."
   (let ((bfr (generate-new-buffer " *ewmctrl-output*"))
         (fields-re (concat "^"
                            (mapconcat 'identity (make-list (1- ewmctrl-field-count) "\\(\\S-+\\)\\s-+") "")
@@ -196,7 +315,11 @@ of the variable `ewmctrl-field-count'.")
                          (width . ,(match-string 6))
                          (height . ,(match-string 7))
                          (client-host . ,(match-string 8))
-                         (title . ,(match-string 9))))))))
+                         (title . ,(match-string 9))))))
+        (unless (assoc 'window-id ewmctrl-window-id-keybind-alist)
+          (setq ewmctrl-window-id-keybind-alist
+                (append ewmctrl-window-id-keybind-alist
+                        `((,(match-string 1) . ,(ewmctrl--assign-key))))))))
     (kill-buffer bfr)
     (cond
      ((eq 'desktop-number ewmctrl-sort-field)
@@ -232,42 +355,169 @@ of the variable `ewmctrl-field-count'.")
      (t
       windows-list))))
 
-(defun ewmctrl-filter-add (field filter)
-  (cond
-   ((eq 'desktop-number field)
-    (let ((current-filter (cdr (assoc 'desktop-number ewmctrl-filters))))
-      (if current-filter
-          (setcdr (assoc 'desktop-number ewmctrl-filters) (cons filter current-filter))
-        (setq ewmctrl-filters (cons `(desktop-number . ,(list filter)) ewmctrl-filters)))))
-   ((eq 'name field)
-    (let ((current-filter (cdr (assoc 'name ewmctrl-filters))))
-      (if current-filter
-          (setcdr (assoc 'name ewmctrl-filters) (cons filter current-filter))
-        (setq ewmctrl-filters (cons `(name . ,(list filter)) ewmctrl-filters)))))
-   ((eq 'pid field)
-    (let ((current-filter (cdr (assoc 'pid ewmctrl-filters))))
-      (if current-filter
-          (setcdr (assoc 'pid ewmctrl-filters) (cons filter current-filter))
-        (setq ewmctrl-filters (cons `(pid . ,(list filter)) ewmctrl-filters)))))
-   (t
-    (error "ewmctrl-filter-add: received unknown value for FIELD"))))
+(defun ewmctrl--move-window-to-other-desktop-by-id (id)
+  "Internal function to move the desktop window specified
+by ID to a different desktop."
+  (let ((desktop (read-string "Move window to desktop number: ")))
+    (call-process-shell-command (concat ewmctrl-wmctrl-path " -i -r '" id "' -t '" desktop "'"))
+    (ewmctrl-refresh)))
+
+(defun ewmctrl--move-window-to-current-desktop-and-focus-by-id (id)
+  "Internal function to move the desktop window specified
+by ID to the current desktop, raise it, and give it focus."
+  (call-process-shell-command (concat ewmctrl-wmctrl-path " -i -R '" id "'"))
+  (ewmctrl-refresh))
+
+(defun ewmctrl--resize-window-by-id (id)
+  "Internal function to resize the desktop window specified
+by ID."
+  (let* ((inhibit-point-motion-hooks nil)
+         (keymap (copy-keymap minibuffer-local-map))
+         (prompt "Resize window to")
+         (width-text " width ")
+         (height-text " height ")
+         (width (ewmctrl--get-window-property-via-id id 'width))
+         (height (ewmctrl--get-window-property-via-id id 'height))
+         (current-size
+          (concat
+           (propertize width-text 'face 'minibuffer-prompt 'read-only t)
+           (propertize width 'read-only nil)
+           (propertize height-text 'face 'minibuffer-prompt 'read-only t)
+           (propertize height 'read-only nil))))
+    (define-key keymap [tab]
+      #'(lambda ()
+          (interactive)
+          (cond
+           ((looking-at (concat "[0-9]+" height-text))
+            (re-search-forward "[0-9]+"))
+           ((looking-at height-text)
+            (progn
+              (re-search-forward "[0-9]")
+              (re-search-backward "[0-9]")))
+           ((looking-at "[0-9]+$")
+            (re-search-forward "$")))))
+    (define-key keymap [backtab]
+      #'(lambda ()
+          (interactive)
+          (cond
+           ((looking-at "$")
+            (progn
+              (re-search-backward (concat height-text "[0-9]+"))
+              (re-search-forward height-text)))
+           ((looking-at "[0-9]+$")
+            (re-search-backward height-text))
+           ((looking-at height-text)
+            (progn
+              (re-search-backward (concat width-text "[0-9]"))
+              (re-search-forward width-text))))))
+    (define-key keymap [C-return]
+      #'(lambda ()
+          (interactive)
+          (let* ((text (buffer-string))
+                 (width (progn
+                          (string-match (concat width-text "\\([0-9]+\\)") text)
+                          (match-string 1 text)))
+                 (height (progn
+                           (string-match (concat height-text "\\([0-9]+\\)$") text)
+                           (match-string 1 text))))
+            (call-process-shell-command (concat ewmctrl-wmctrl-path " -i -r '" id "' -e '0,-1,-1," width "," height "'"))
+            (ewmctrl-refresh))))
+    (define-key keymap [left]
+      #'(lambda ()
+          (interactive)
+          (cond
+           ((looking-back height-text)
+            (left-char (length height-text)))
+           ((not (looking-back width-text))
+            (left-char)))))
+    (define-key keymap [right]
+      #'(lambda ()
+          (interactive)
+          (cond
+           ((looking-at height-text)
+            (right-char (length height-text)))
+           ((not (looking-at "$"))
+            (right-char)))))
+    (define-key keymap (kbd "DEL")
+      #'(lambda ()
+          (interactive)
+          (if (not (looking-back width-text))
+              (delete-char -1))))
+    (let* ((size (read-from-minibuffer prompt current-size keymap))
+           (width (progn
+                    (string-match "width \\([0-9]+\\)" size)
+                    (match-string 1 size)))
+           (height (progn
+                     (string-match "height \\([0-9]+\\)$" size)
+                     (match-string 1 size))))
+      ;; man wmctrl(1) states:
+      ;;
+      ;; "The first value, g, is the gravity of the window, with 0
+      ;;  being the most common value (the default value for the window)
+      ;;  ...
+      ;;  -1 in any position is interpreted to mean that the current
+      ;;  geometry value should not be modified."
+      (call-process-shell-command (concat ewmctrl-wmctrl-path " -i -r '" id "' -e '0,-1,-1," width "," height "'"))
+      (ewmctrl-refresh))))
+
+
+;; User-facing functions.
+
+(defun ewmctrl-change-window-name (&optional key)
+  "Change name of desktop window.
+
+Without optional argument, change name of window whose title
+matches the line at point.
+
+With optional argument, change name of window in
+`ewmctrl-window-id-keybind-alist' associated with KEY."
+  (interactive)
+  (if key
+      (ewmctrl--change-window-name-by-id (car (rassoc key ewmctrl-window-id-keybind-alist)))
+    (ewmctrl--change-window-name-by-id (get-text-property (point) 'window-id))))
+
+(defun ewmctrl-change-window-icon-name (&optional key)
+  "Change icon name of desktop window.
+
+Without optional argument, change icon name of window whose
+title matches the line at point.
+
+With optional argument, change icon name of window in
+`ewmctrl-window-id-keybind-alist' associated with KEY."
+  (interactive)
+  (if key
+      (ewmctrl--change-window-icon-name-by-id (car (rassoc key ewmctrl-window-id-keybind-alist)))
+    (ewmctrl--change-window-icon-name-by-id (get-text-property (point) 'window-id))))
+
+(defun ewmctrl-delete-window (&optional key)
+  "Delete specified desktop window.
+
+Without optional argument, delete window whose title matches the
+line at point.
+
+With optional argument, delete window in
+`ewmctrl-window-id-keybind-alist' associated with KEY."
+  (interactive)
+  (if key
+      (ewmctrl--close-window-by-id (car (rassoc key ewmctrl-window-id-keybind-alist)))
+    (ewmctrl--close-window-by-id (get-text-property (point) 'window-id))))
 
 (defun ewmctrl-filter-by-desktop-number (filter)
   "Add a filter by desktop number."
   (interactive "sDesktop number: ")
-  (ewmctrl-filter-add 'desktop-number filter)
+  (ewmctrl--filter-add 'desktop-number filter)
   (ewmctrl-refresh))
 
 (defun ewmctrl-filter-by-name (filter)
   "Add a filter by window name."
   (interactive "sWindow name: ")
-  (ewmctrl-filter-add 'name filter)
+  (ewmctrl--filter-add 'name filter)
   (ewmctrl-refresh))
 
 (defun ewmctrl-filter-by-pid (filter)
   "Add a filter by PID."
   (interactive "sPID: ")
-  (ewmctrl-filter-add 'pid filter)
+  (ewmctrl--filter-add 'pid filter)
   (ewmctrl-refresh))
 
 (defun ewmctrl-filters-clear ()
@@ -298,20 +548,98 @@ of the variable `ewmctrl-field-count'.")
   (message "PID filters cleared.")
   (ewmctrl-refresh))
 
-(defun ewmctrl-move-window-to-other-desktop (desktop)
-  "Move desktop window specified by point to a different desktop."
-  (interactive "sDesktop: ")
-  (let ((id (get-text-property (point) 'window-id)))
-    (call-process-shell-command (concat ewmctrl-wmctrl-path " -i -r '" id "' -t '" desktop "'"))
-    (ewmctrl-refresh)))
+(defun ewmctrl-focus-window (&optional key)
+  "Give focus to specified desktop window.
 
-(defun ewmctrl-move-window-to-current-desktop-and-focus ()
-  "Move desktop window specified by point to current desktop,
-raise it and give it focus."
+Without optional argument, focus window whose title matches the
+line at point.
+
+With optional argument, focus window in
+`ewmctrl-window-id-keybind-alist' associated with KEY."
   (interactive)
-  (let ((id (get-text-property (point) 'window-id)))
-    (call-process-shell-command (concat ewmctrl-wmctrl-path " -i -R '" id "'"))
-    (ewmctrl-refresh)))
+  (if key
+      (ewmctrl--focus-window-by-id (car (rassoc key ewmctrl-window-id-keybind-alist)))
+    (ewmctrl--focus-window-by-id (get-text-property (point) 'window-id))))
+
+(defun ewmctrl-move-window-to-other-desktop (&optional key)
+  "Move desktop window to a different desktop.
+
+Without optional argument, move the window whose title matches the
+line at point.
+
+With optional argument, move the window in
+`ewmctrl-window-id-keybind-alist' associated with KEY."
+  (interactive)
+  (if key
+      (ewmctrl--move-window-to-other-desktop-by-id (car (rassoc key ewmctrl-window-id-keybind-alist)))
+    (ewmctrl--move-window-to-other-desktop-by-id (get-text-property (point) 'window-id))))
+
+(defun ewmctrl-move-window-to-current-desktop-and-focus (&optional key)
+  "Move desktop window to current desktop, raise it and give
+it focus.
+
+Without optional argument, move the window whose title matches the
+line at point.
+
+With optional argument, move the window in
+`ewmctrl-window-id-keybind-alist' associated with KEY."
+  (interactive)
+  (if key
+      (ewmctrl--move-window-to-current-desktop-and-focus-by-id (car (rassoc key ewmctrl-window-id-keybind-alist)))
+    (ewmctrl--move-window-to-current-desktop-and-focus-by-id (get-text-property (point) 'window-id))))
+
+(defun ewmctrl-refresh ()
+  "Refresh the contents of the *ewmctrl* buffer."
+  (interactive)
+  (with-current-buffer "*ewmctrl*"
+    (let ((inhibit-read-only t)
+          (window-list (ewmctrl--list-windows)))
+      (erase-buffer)
+      (insert (propertize "  Key  Desktop    PID  Name\n" 'face '(foreground-color . "ForestGreen")))
+      (insert (propertize "  ---  -------  -----  ----\n" 'face '(foreground-color . "ForestGreen")))
+      (dolist (win window-list)
+        (if (and (or ewmctrl-include-sticky-windows
+                     (and (not ewmctrl-include-sticky-windows)
+                          (not (string= "-1" (cdr (assoc 'desktop-number win))))))
+                 (or (not ewmctrl-filters)
+                     (and (if (assoc 'desktop-number ewmctrl-filters)
+                              (member (cdr (assoc 'desktop-number win)) (cdr (assoc 'desktop-number ewmctrl-filters)))
+                            t)
+                          (if (assoc 'name ewmctrl-filters)
+                              (let ((result nil))
+                                (dolist (f (cdr (assoc 'name ewmctrl-filters)))
+                                  (if (string-match f (cdr (assoc 'title win)))
+                                      (setq result t)))
+                                result)
+                            t)
+                          (if (assoc 'pid ewmctrl-filters)
+                              (member (cdr (assoc 'pid win)) (cdr (assoc 'pid ewmctrl-filters)))
+                            t))))
+            (insert (propertize (concat "   "
+                                        (format "%1s" (cdr (assoc (cdr (assoc 'window-id win)) ewmctrl-window-id-keybind-alist)))
+                                        "   "
+                                        (format "%4s" (cdr (assoc 'desktop-number win)))
+                                        "     "
+                                        (format "%5s" (cdr (assoc 'pid win)))
+                                        "  "
+                                        (cdr (assoc 'title win)) "\n")
+                                'window-id (cdr (assoc 'window-id win))
+                                'title (cdr (assoc 'title win))
+                                'width (cdr (assoc 'width win))
+                                'height (cdr (assoc 'height win)))))))))
+
+(defun ewmctrl-resize-window (&optional key)
+  "Resize desktop window.
+
+Without optional argument, resize the window whose title matches the
+line at point.
+
+With optional argument, resize the window in
+`ewmctrl-window-id-keybind-alist' associated with KEY."
+  (interactive)
+  (if key
+      (ewmctrl--resize-window-by-id (car (rassoc key ewmctrl-window-id-keybind-alist)))
+    (ewmctrl--resize-window-by-id (get-text-property (point) 'window-id))))
 
 (defun ewmctrl-sort-by-desktop-number ()
   "Sort list of desktop windows numerically on the desktop number
@@ -352,163 +680,6 @@ PID field."
   (interactive)
   (setq ewmctrl-sort-field 'pid-reversed)
   (ewmctrl-refresh))
-
-(defun ewmctrl-focus-window ()
-  "Give focus to desktop window whose title matches the line at point."
-  (interactive)
-  (let ((id (get-text-property (point) 'window-id)))
-    (call-process-shell-command (concat ewmctrl-wmctrl-path " -i -a '" id "'"))))
-
-(defun ewmctrl-resize-window (size)
-  "Resize desktop window specified at point."
-  (interactive
-   (let* ((inhibit-point-motion-hooks nil)
-          (keymap (copy-keymap minibuffer-local-map))
-          (prompt "Resize window to")
-          (width-text " width ")
-          (height-text " height ")
-          (id (get-text-property (point) 'window-id))
-          (width (get-text-property (point) 'width))
-          (height (get-text-property (point) 'height))
-          (current-size
-           (concat
-            (propertize width-text 'face 'minibuffer-prompt 'read-only t)
-            (propertize width 'read-only nil)
-            (propertize height-text 'face 'minibuffer-prompt 'read-only t)
-            (propertize height 'read-only nil))))
-     (define-key keymap [tab]
-       #'(lambda ()
-           (interactive)
-           (cond
-            ((looking-at (concat "[0-9]+" height-text))
-             (re-search-forward "[0-9]+"))
-            ((looking-at height-text)
-             (progn
-               (re-search-forward "[0-9]")
-               (re-search-backward "[0-9]")))
-            ((looking-at "[0-9]+$")
-             (re-search-forward "$")))))
-     (define-key keymap [backtab]
-       #'(lambda ()
-           (interactive)
-           (cond
-            ((looking-at "$")
-             (progn
-               (re-search-backward (concat height-text "[0-9]+"))
-               (re-search-forward height-text)))
-            ((looking-at "[0-9]+$")
-             (re-search-backward height-text))
-            ((looking-at height-text)
-             (progn
-               (re-search-backward (concat width-text "[0-9]"))
-               (re-search-forward width-text))))))
-     (define-key keymap [C-return]
-       #'(lambda ()
-           (interactive)
-           (let* ((text (buffer-string))
-                  (width (progn
-                           (string-match (concat width-text "\\([0-9]+\\)") text)
-                           (match-string 1 text)))
-                  (height (progn
-                            (string-match (concat height-text "\\([0-9]+\\)$") text)
-                            (match-string 1 text))))
-             (call-process-shell-command (concat ewmctrl-wmctrl-path " -i -r '" id "' -e '0,-1,-1," width "," height "'"))
-             (ewmctrl-refresh))))
-     (define-key keymap [left]
-       #'(lambda ()
-           (interactive)
-           (cond
-            ((looking-back height-text)
-             (left-char (length height-text)))
-            ((not (looking-back width-text))
-             (left-char)))))
-     (define-key keymap [right]
-       #'(lambda ()
-           (interactive)
-           (cond
-            ((looking-at height-text)
-             (right-char (length height-text)))
-            ((not (looking-at "$"))
-             (right-char)))))
-     (define-key keymap (kbd "DEL")
-       #'(lambda ()
-           (interactive)
-           (if (not (looking-back width-text))
-               (delete-char -1))))
-     (list
-      (read-from-minibuffer prompt current-size keymap)))
-   (let ((id (get-text-property (point) 'window-id))
-         (width (progn
-                  (string-match "width \\([0-9]+\\)" size)
-                  (match-string 1 size)))
-         (height (progn
-                   (string-match "height \\([0-9]+\\)$" size)
-                   (match-string 1 size))))
-     ;; man wmctrl(1) states:
-     ;;
-     ;; "The first value, g, is the gravity of the window, with 0
-     ;;  being the most common value (the default value for the window)
-     ;;  ...
-     ;;  -1 in any position is interpreted to mean that the current
-     ;;  geometry value should not be modified."
-     (call-process-shell-command (concat ewmctrl-wmctrl-path " -i -r '" id "' -e '0,-1,-1," width "," height "'"))
-     (ewmctrl-refresh))))
-
-(defun ewmctrl-delete-window ()
-  "Delete desktop window specified at point."
-  (interactive)
-  (let ((id (get-text-property (point) 'window-id)))
-    (if (yes-or-no-p (concat "Delete window '" (get-text-property (point) 'title) "'? "))
-        (progn
-          (call-process-shell-command (concat ewmctrl-wmctrl-path " -i -c '" id "'"))
-          (ewmctrl-refresh)))))
-
-(defun ewmctrl-change-window-name (name)
-  "Change name of desktop window specified at point."
-  (interactive "sNew window name: ")
-  (let ((id (get-text-property (point) 'window-id)))
-    (call-process-shell-command (concat ewmctrl-wmctrl-path " -i -r '" id "' -N '" name "'"))
-    (ewmctrl-refresh)))
-
-(defun ewmctrl-change-window-icon-name (name)
-  "Change icon name of desktop window specified at point."
-  (interactive "sNew window icon name: ")
-  (let ((id (get-text-property (point) 'window-id)))
-    (call-process-shell-command (concat ewmctrl-wmctrl-path " -i -r '" id "' -I '" name "'"))
-    (ewmctrl-refresh)))
-
-(defun ewmctrl-refresh ()
-  "Refresh the contents of the *ewmctrl* buffer."
-  (interactive)
-  (with-current-buffer "*ewmctrl*"
-    (let ((inhibit-read-only t)
-          (window-list (ewmctrl-list-windows)))
-      (erase-buffer)
-      (insert (propertize "  Desktop    PID  Name\n" 'face '(foreground-color . "ForestGreen")))
-      (insert (propertize "  -------  -----  ----\n" 'face '(foreground-color . "ForestGreen")))
-      (dolist (win window-list)
-        (if (and (or ewmctrl-include-sticky-windows
-                     (and (not ewmctrl-include-sticky-windows)
-                          (not (string= "-1" (cdr (assoc 'desktop-number win))))))
-                 (or (not ewmctrl-filters)
-                     (and (if (assoc 'desktop-number ewmctrl-filters)
-                              (member (cdr (assoc 'desktop-number win)) (cdr (assoc 'desktop-number ewmctrl-filters)))
-                            t)
-                          (if (assoc 'name ewmctrl-filters)
-                              (let ((result nil))
-                                (dolist (f (cdr (assoc 'name ewmctrl-filters)))
-                                  (if (string-match f (cdr (assoc 'title win)))
-                                      (setq result t)))
-                                result)
-                            t)
-                          (if (assoc 'pid ewmctrl-filters)
-                              (member (cdr (assoc 'pid win)) (cdr (assoc 'pid ewmctrl-filters)))
-                            t))))
-            (insert (propertize (concat "  " (format "%4s" (cdr (assoc 'desktop-number win))) "     " (format "%5s" (cdr (assoc 'pid win))) "  " (cdr (assoc 'title win)) "\n")
-                                'window-id (cdr (assoc 'window-id win))
-                                'title (cdr (assoc 'title win))
-                                'width (cdr (assoc 'width win))
-                                'height (cdr (assoc 'height win)))))))))
 
 
 (define-derived-mode ewmctrl-mode special-mode "ewmctrl"
