@@ -304,22 +304,31 @@ by ID."
     (with-current-buffer bfr
       (goto-char (point-min))
       (while (re-search-forward fields-re nil t)
-        (setq windows-list
-              (append windows-list
-                      (list
-                       `((window-id . ,(match-string 1))
-                         (desktop-number . ,(match-string 2))
-                         (pid . ,(match-string 3))
-                         (x-offset . ,(match-string 4))
-                         (y-offset . ,(match-string 5))
-                         (width . ,(match-string 6))
-                         (height . ,(match-string 7))
-                         (client-host . ,(match-string 8))
-                         (title . ,(match-string 9))))))
-        (unless (assoc 'window-id ewmctrl-window-id-keybind-alist)
-          (setq ewmctrl-window-id-keybind-alist
-                (append ewmctrl-window-id-keybind-alist
-                        `((,(match-string 1) . ,(ewmctrl--assign-key))))))))
+        (let ((window-id (match-string 1))
+              (desktop-number (match-string 2))
+              (pid (match-string 3))
+              (x-offset (match-string 4))
+              (y-offset (match-string 5))
+              (width (match-string 6))
+              (height (match-string 7))
+              (client-host (match-string 8))
+              (title (match-string 9)))
+          (setq windows-list
+                (append windows-list
+                        (list
+                         `((window-id . ,window-id)
+                           (desktop-number . ,desktop-number)
+                           (pid . ,pid)
+                           (x-offset . ,x-offset)
+                           (y-offset . ,y-offset)
+                           (width . ,width)
+                           (height . ,height)
+                           (client-host . ,client-host)
+                           (title . ,title)))))
+          (unless (assoc window-id ewmctrl-window-id-keybind-alist)
+            (setq ewmctrl-window-id-keybind-alist
+                  (append ewmctrl-window-id-keybind-alist
+                          `((,window-id . ,(ewmctrl--assign-key)))))))))
     (kill-buffer bfr)
     (cond
      ((eq 'desktop-number ewmctrl-sort-field)
