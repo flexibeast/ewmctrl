@@ -201,7 +201,8 @@ window."
           (setq chosen-char (string (decode-char 'unicode current-char)))
           (define-key ewmctrl-mode-map
             (kbd (concat "SPC " chosen-char))
-            (eval `(lambda ()
+            (eval `(defun ,(intern (concat "ewmctrl-select-window-" chosen-char "-for-action")) ()
+                     ,(concat "Select window '" chosen-char "' for an action.")
                      (interactive)
                      (ewmctrl--dispatch-action ,chosen-char)))))))
     chosen-char))
