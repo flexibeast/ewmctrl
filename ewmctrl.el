@@ -134,6 +134,12 @@
   "Emacs interface to `wmctrl'."
   :group 'external)
 
+(defcustom ewmctrl-close-frame-on-focus-window nil
+  "Whether to close the frame containing the *ewmctrl* buffer
+after giving focus to a desktop window."
+  :type 'boolean
+  :group 'ewmctrl)
+
 (defcustom ewmctrl-include-sticky-windows nil
   "Whether to include sticky windows in window list."
   :type 'boolean
@@ -280,7 +286,9 @@ by KEY."
 (defun ewmctrl--focus-window-by-id (id)
   "Internal function to focus the desktop window specified
 by ID."
-  (call-process-shell-command (concat ewmctrl-wmctrl-path " -i -a '" id "'")))
+  (call-process-shell-command (concat ewmctrl-wmctrl-path " -i -a '" id "'"))
+  (if ewmctrl-close-frame-on-focus-window
+      (delete-frame)))
 
 (defun ewmctrl--get-window-property-via-id (id property)
   "Internal function to get PROPERTY of window specified
