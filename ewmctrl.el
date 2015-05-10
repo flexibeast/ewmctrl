@@ -134,9 +134,9 @@
   "Emacs interface to `wmctrl'."
   :group 'external)
 
-(defcustom ewmctrl-wmctrl-path "/usr/bin/wmctrl"
-  "Absolute path of `wmctrl' executable."
-  :type '(file :must-match t)
+(defcustom ewmctrl-include-sticky-windows nil
+  "Whether to include sticky windows in window list."
+  :type 'boolean
   :group 'ewmctrl)
 
 (defcustom ewmctrl-sort-field 'name
@@ -144,10 +144,11 @@
   :type '(list desktop-number desktop-number-reversed name name-reversed pid pid-reversed)
   :group 'ewmctrl)
 
-(defcustom ewmctrl-include-sticky-windows nil
-  "Whether to include sticky windows in window list."
-  :type 'boolean
+(defcustom ewmctrl-wmctrl-path "/usr/bin/wmctrl"
+  "Absolute path of `wmctrl' executable."
+  :type '(file :must-match t)
   :group 'ewmctrl)
+
 
 ;; Internal variables.
 
@@ -213,7 +214,6 @@ specified by ID."
   (let ((name (read-string "New window icon name: ")))
     (call-process-shell-command (concat ewmctrl-wmctrl-path " -i -r '" id "' -I '" name "'"))
     (ewmctrl-refresh)))
-
 
 (defun ewmctrl--change-window-name-by-id (id)
   "Internal function to change the name of the window
