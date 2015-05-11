@@ -147,12 +147,11 @@ after giving focus to a desktop window."
   :type 'boolean
   :group 'ewmctrl)
 
-(defcustom ewmctrl-single-key-to-focus-window nil
-  "Whether to enable functionality to focus a window simply
-by pressing the designated key for that window.
+(defcustom ewmctrl-single-key-to-focus nil
+  "Whether to, by default, enable functionality to focus a
+window simply by pressing the designated key for that window.
 
-When enabled, other `emwctrl' functionality can be toggled
-on and off via the ';' key."
+This functionality can be toggled on and off via the ';' key."
   :type 'boolean
   :group 'ewmctrl)
 
@@ -188,10 +187,6 @@ a filter to apply on the field indicated by that symbol.")
 
 (defvar ewmctrl-mode-map (make-sparse-keymap)
   "Keymap for `ewmctrl-mode'.")
-
-(defvar ewmctrl-single-key-to-focus nil
-  "Whether `ewmctrl' single-key-to-focus functionality is
-enabled.")
 
 (defvar ewmctrl-single-key-to-focus-map (make-sparse-keymap)
   "Keymap for `ewmctrl' single-key-to-focus functionality.")
