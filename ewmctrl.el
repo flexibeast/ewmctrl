@@ -147,6 +147,18 @@ after giving focus to a desktop window."
   :type 'boolean
   :group 'ewmctrl)
 
+(defcustom ewmctrl-post-action-hook '()
+  "Functions to call after running an action on a desktop
+window.
+
+Each function is called with two arguments:
+
+* CHAR, the numeric value of the keybind which called the action;
+
+* KEY, the key designating the window being acted upon."
+  :type '(repeat function)
+  :group 'ewmctrl)
+
 (defcustom ewmctrl-single-key-to-focus nil
   "Whether to, by default, enable functionality to focus a
 window simply by pressing the designated key for that window.
@@ -230,7 +242,7 @@ desktop window specified by ID."
             (eval `(defun ,(intern (concat "ewmctrl-focus-window-with-key-" chosen-char)) ()
                      ,(concat "Focus window '" chosen-char "' using '" chosen-char"' key.")
                      (interactive)
-                     (ewmctrl--focus-window-by-id ,id)))))))
+                     (ewmctrl--dispatch-action 13 ,id)))))))
     chosen-char))
 
 (defun ewmctrl--change-window-icon-name-by-id (id)
@@ -263,9 +275,12 @@ specified by ID."
         (setq ewmctrl-window-id-keybind-alist (delq (assoc id ewmctrl-window-id-keybind-alist) ewmctrl-window-id-keybind-alist))
         (ewmctrl-refresh))))
 
-(defun ewmctrl--dispatch-action (key)
+(defun ewmctrl--dispatch-action (key &optional id)
   "Internal function to perform action on window specified
-by KEY."
+by KEY.
+
+After the action is dispatched, the functions listed in
+`ewmctrl-post-action-hook' are called."
   (let ((char (read-char nil t)))
     (cond
      ((= 13 char) ; RET
@@ -283,7 +298,9 @@ by KEY."
      ((= 114 char) ; r
       (ewmctrl-resize-window key))
      (t
-      (user-error (concat "ewmctrl--dispatch-action: don't know how to handle character " (number-to-string char)))))))
+      (user-error (concat "ewmctrl--dispatch-action: don't know how to handle character " (number-to-string char)))))
+    (dolist (f ewmctrl-post-action-hook)
+      (funcall f char key))))
 
 (defun ewmctrl--filter-add (field filter)
   "Internal function to add FILTER on FIELD."
