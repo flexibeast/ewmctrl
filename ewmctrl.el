@@ -103,6 +103,8 @@
 
 ;; * p - Move point to previous line (`previous-line').
 
+;; * ; - Toggle single-key-to-focus (`ewmctrl-toggle-single-key-to-focus'). When enabled, a desktop window can be focused simply by pressing the designated key for that window.
+
 ;; Customisation options are available via the `ewmctrl' customize-group.
 
 ;; ## Issues / bugs
@@ -145,6 +147,15 @@ after giving focus to a desktop window."
   :type 'boolean
   :group 'ewmctrl)
 
+(defcustom ewmctrl-single-key-to-focus-window nil
+  "Whether to enable functionality to focus a window simply
+by pressing the designated key for that window.
+
+When enabled, other `emwctrl' functionality can be toggled
+on and off via the ';' key."
+  :type 'boolean
+  :group 'ewmctrl)
+
 (defcustom ewmctrl-sort-field 'name
   "Field on which to sort the list of desktop windows."
   :type '(list desktop-number desktop-number-reversed name name-reversed pid pid-reversed)
@@ -178,6 +189,13 @@ a filter to apply on the field indicated by that symbol.")
 (defvar ewmctrl-mode-map (make-sparse-keymap)
   "Keymap for `ewmctrl-mode'.")
 
+(defvar ewmctrl-single-key-to-focus nil
+  "Whether `ewmctrl' single-key-to-focus functionality is
+enabled.")
+
+(defvar ewmctrl-single-key-to-focus-map (make-sparse-keymap)
+  "Keymap for `ewmctrl' single-key-to-focus functionality.")
+
 (defvar ewmctrl-window-id-keybind-alist `(("0x00000000" . ,(string (decode-char 'unicode #xfffd))))
   "Alist of window IDs and the keybinds associated with them.
 
@@ -194,9 +212,9 @@ of the variable `ewmctrl-field-count'.")
 
 ;; Internal functions.
 
-(defun ewmctrl--assign-key ()
-  "Internal function to return a new key to refer to a specific
-window."
+(defun ewmctrl--assign-key (id)
+  "Internal function to return a new key to refer to the
+desktop window specified by ID."
   ;; Unicode ASCII a -> z == 0x0061 -> 0x007A
   (let ((current-char #x0061)
         (chosen-char nil))
@@ -211,7 +229,13 @@ window."
             (eval `(defun ,(intern (concat "ewmctrl-select-window-" chosen-char "-for-action")) ()
                      ,(concat "Select window '" chosen-char "' for an action.")
                      (interactive)
-                     (ewmctrl--dispatch-action ,chosen-char)))))))
+                     (ewmctrl--dispatch-action ,chosen-char))))
+          (define-key ewmctrl-single-key-to-focus-map
+            (kbd chosen-char)
+            (eval `(defun ,(intern (concat "ewmctrl-focus-window-with-key-" chosen-char)) ()
+                     ,(concat "Focus window '" chosen-char "' using '" chosen-char"' key.")
+                     (interactive)
+                     (ewmctrl--focus-window-by-id ,id)))))))
     chosen-char))
 
 (defun ewmctrl--change-window-icon-name-by-id (id)
@@ -235,6 +259,10 @@ specified by ID."
         (call-process-shell-command (concat ewmctrl-wmctrl-path " -i -c '" id "'"))
         (define-key ewmctrl-mode-map
           (kbd (concat "SPC " (cdr (assoc id ewmctrl-window-id-keybind-alist))))
+          (lambda ()
+            (interactive)))
+        (define-key ewmctrl-single-key-to-focus-map
+          (kbd (cdr (assoc id ewmctrl-window-id-keybind-alist)))
           (lambda ()
             (interactive)))
         (setq ewmctrl-window-id-keybind-alist (delq (assoc id ewmctrl-window-id-keybind-alist) ewmctrl-window-id-keybind-alist))
@@ -337,7 +365,7 @@ by ID."
           (unless (assoc window-id ewmctrl-window-id-keybind-alist)
             (setq ewmctrl-window-id-keybind-alist
                   (append ewmctrl-window-id-keybind-alist
-                          `((,window-id . ,(ewmctrl--assign-key)))))))))
+                          `((,window-id . ,(ewmctrl--assign-key window-id)))))))))
     (kill-buffer bfr)
     (cond
      ((eq 'desktop-number ewmctrl-sort-field)
@@ -699,6 +727,19 @@ PID field."
   (setq ewmctrl-sort-field 'pid-reversed)
   (ewmctrl-refresh))
 
+(defun ewmctrl-toggle-single-key-to-focus ()
+  "Toggle whether or not to focus a window simply by pressing
+its designated key."
+  (interactive)
+  (setq ewmctrl-single-key-to-focus (not ewmctrl-single-key-to-focus))
+  (if ewmctrl-single-key-to-focus
+      (progn
+        (setq-local overriding-local-map ewmctrl-single-key-to-focus-map)
+        (message "Single key now focuses window."))
+    (progn
+      (setq-local overriding-local-map nil)
+      (message "ewmctrl now using default keybindings."))))
+
 
 (define-derived-mode ewmctrl-mode special-mode "ewmctrl"
   "Major mode for managing desktop windows via `wmctrl'."
@@ -725,7 +766,9 @@ PID field."
   (define-key ewmctrl-mode-map (kbd "Sn") 'ewmctrl-sort-by-name)
   (define-key ewmctrl-mode-map (kbd "SN") 'ewmctrl-sort-by-name-reversed)
   (define-key ewmctrl-mode-map (kbd "Sp") 'ewmctrl-sort-by-pid)
-  (define-key ewmctrl-mode-map (kbd "SP") 'ewmctrl-sort-by-pid-reversed))
+  (define-key ewmctrl-mode-map (kbd "SP") 'ewmctrl-sort-by-pid-reversed)
+  (define-key ewmctrl-mode-map (kbd ";") 'ewmctrl-toggle-single-key-to-focus)
+  (define-key ewmctrl-single-key-to-focus-map (kbd ";") 'ewmctrl-toggle-single-key-to-focus))
 
 ;;;###autoload
 (defun ewmctrl ()

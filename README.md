@@ -36,7 +36,7 @@ The default keybindings are:
 
 * N - Change the name of the selected desktop window (`ewmctrl-change-window-name`).
 
-* r - Resize the selected desktop window by specifying dimensions in the minibuffer (`ewmctrl-resize-window`). Whilst in the minibuffer, use TAB and S-TAB to move within and between the width and height fields, and use C-RET to preview the currently specified dimensions.
+* r - Resize the selected desktop window by specifying dimensions in the minibuffer (`ewmctrl-resize-window`). Whilst in the minibuffer, use <kbd>TAB</kbd> and <kbd>S-TAB</kbd> to move within and between the width and height fields, and use C-RET to preview the currently specified dimensions.
 
 * SPC *[key]* *[action]* - Select window specified by *[key]* and perform *[action]* on it, where *[action]* is an action keybinding. For example, <kbd>SPC a RET</kbd> will switch to the desktop window designated by 'a', whilst <kbd>SPC c D</kbd> will delete the desktop window designated by 'c'.
 
@@ -77,6 +77,8 @@ The default keybindings are:
 * n - Move point to next line (`next-line`).
 
 * p - Move point to previous line (`previous-line`).
+
+* ; - Toggle single-key-to-focus (`ewmctrl-toggle-single-key-to-focus`). When enabled, a desktop window can be focused simply by pressing the designated key for that window.
 
 Customisation options are available via the `ewmctrl` customize-group.
 
