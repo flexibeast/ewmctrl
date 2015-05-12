@@ -153,9 +153,9 @@ window.
 
 Each function is called with two arguments:
 
-* CHAR, the numeric value of the keybind which called the action;
+* KEY, the key designating the window being acted upon;
 
-* KEY, the key designating the window being acted upon."
+* CHAR, the numeric value of the keybind which called the action."
   :type '(repeat function)
   :group 'ewmctrl)
 
@@ -242,7 +242,7 @@ desktop window specified by ID."
             (eval `(defun ,(intern (concat "ewmctrl-focus-window-with-key-" chosen-char)) ()
                      ,(concat "Focus window '" chosen-char "' using '" chosen-char"' key.")
                      (interactive)
-                     (ewmctrl--dispatch-action 13 ,id)))))))
+                     (ewmctrl--dispatch-action ,chosen-char)))))))
     chosen-char))
 
 (defun ewmctrl--change-window-icon-name-by-id (id)
@@ -275,32 +275,37 @@ specified by ID."
         (setq ewmctrl-window-id-keybind-alist (delq (assoc id ewmctrl-window-id-keybind-alist) ewmctrl-window-id-keybind-alist))
         (ewmctrl-refresh))))
 
-(defun ewmctrl--dispatch-action (key &optional id)
+(defun ewmctrl--dispatch-action (key)
   "Internal function to perform action on window specified
 by KEY.
 
 After the action is dispatched, the functions listed in
 `ewmctrl-post-action-hook' are called."
-  (let ((char (read-char nil t)))
-    (cond
-     ((= 13 char) ; RET
-      (ewmctrl-focus-window key))
-     ((= 68 char) ; D
-      (ewmctrl-delete-window key))
-     ((= 73 char) ; I
-      (ewmctrl-change-window-icon-name key))
-     ((= 77 char) ; M
-      (ewmctrl-move-window-to-current-desktop-and-focus key))
-     ((= 78 char) ; N
-      (ewmctrl-change-window-name key))
-     ((= 109 char) ; m
-      (ewmctrl-move-window-to-other-desktop key))
-     ((= 114 char) ; r
-      (ewmctrl-resize-window key))
-     (t
-      (user-error (concat "ewmctrl--dispatch-action: don't know how to handle character " (number-to-string char)))))
-    (dolist (f ewmctrl-post-action-hook)
-      (funcall f char key))))
+  (if ewmctrl-single-key-to-focus
+      (progn
+        (ewmctrl-focus-window key)
+        (dolist (f ewmctrl-post-action-hook)
+          (funcall f key 13)))
+    (let ((char (read-char nil t)))
+      (cond
+       ((= 13 char) ; RET
+        (ewmctrl-focus-window key))
+       ((= 68 char) ; D
+        (ewmctrl-delete-window key))
+       ((= 73 char) ; I
+        (ewmctrl-change-window-icon-name key))
+       ((= 77 char) ; M
+        (ewmctrl-move-window-to-current-desktop-and-focus key))
+       ((= 78 char) ; N
+        (ewmctrl-change-window-name key))
+       ((= 109 char) ; m
+        (ewmctrl-move-window-to-other-desktop key))
+       ((= 114 char) ; r
+        (ewmctrl-resize-window key))
+       (t
+        (user-error (concat "ewmctrl--dispatch-action: don't know how to handle character " (number-to-string char)))))
+      (dolist (f ewmctrl-post-action-hook)
+        (funcall f key char)))))
 
 (defun ewmctrl--filter-add (field filter)
   "Internal function to add FILTER on FIELD."
