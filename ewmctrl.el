@@ -796,7 +796,9 @@ its designated key."
   (let ((bfr (get-buffer-create "*ewmctrl*")))
     (ewmctrl-refresh)
     (switch-to-buffer bfr)
-    (ewmctrl-mode)))
+    (ewmctrl-mode)
+    (when ewmctrl-single-key-to-focus
+      (setq-local overriding-local-map ewmctrl-single-key-to-focus-map))))
 
 
 ;; --
