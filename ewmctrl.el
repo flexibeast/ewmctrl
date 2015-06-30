@@ -142,6 +142,36 @@ after giving focus to a desktop window."
   :type 'boolean
   :group 'ewmctrl)
 
+(defcustom ewmctrl-format-header "  Key  Desktop    PID  Name\n  ---  -------  -----  ----\n"
+  "String to be used as the header for the window list."
+  :type 'string
+  :group 'ewmctrl)
+
+(defcustom ewmctrl-format-fields-order '(win-key win-desktop win-pid win-name)
+  "List of symbols describing which fields to display in the
+window list, and in what order (leftmost-first).
+
+Each symbol should be one of 'win-key, 'win-desktop, 'win-pid
+or 'win-name.
+
+Changing the value of this variable requires the value of
+`ewmctrl-format-fields' to be set appropriately."
+  :type '(repeat (choice (const :tag "win-key" win-key)
+                         (const :tag "win-desktop" win-desktop)
+                         (const :tag "win-pid" win-pid)
+                         (const :tag "win-name" win-name)))
+  :group 'ewmctrl)
+
+
+(defcustom ewmctrl-format-fields "   %1s   %4s     %5s  %s\n"
+  "String to be passed to `format' to lay out each entry in
+the window list.
+
+Changing the value of this variable requires the value of
+`ewmctrl-format-fields-order' to be set appropriately."
+  :type 'string
+  :group 'ewmctrl)
+
 (defcustom ewmctrl-include-sticky-windows nil
   "Whether to include sticky windows in window list."
   :type 'boolean
@@ -658,8 +688,7 @@ With optional argument, move the window in
     (let ((inhibit-read-only t)
           (window-list (ewmctrl--list-windows)))
       (erase-buffer)
-      (insert (propertize "  Key  Desktop    PID  Name\n" 'face '(foreground-color . "ForestGreen")))
-      (insert (propertize "  ---  -------  -----  ----\n" 'face '(foreground-color . "ForestGreen")))
+      (insert (propertize ewmctrl-format-header 'face '(foreground-color . "ForestGreen")))
       (dolist (win window-list)
         (if (and (or ewmctrl-include-sticky-windows
                      (and (not ewmctrl-include-sticky-windows)
@@ -678,18 +707,15 @@ With optional argument, move the window in
                           (if (assoc 'pid ewmctrl-filters)
                               (member (cdr (assoc 'pid win)) (cdr (assoc 'pid ewmctrl-filters)))
                             t))))
-            (insert (propertize (concat "   "
-                                        (format "%1s" (cdr (assoc (cdr (assoc 'window-id win)) ewmctrl-window-id-keybind-alist)))
-                                        "   "
-                                        (format "%4s" (cdr (assoc 'desktop-number win)))
-                                        "     "
-                                        (format "%5s" (cdr (assoc 'pid win)))
-                                        "  "
-                                        (cdr (assoc 'title win)) "\n")
-                                'window-id (cdr (assoc 'window-id win))
-                                'title (cdr (assoc 'title win))
-                                'width (cdr (assoc 'width win))
-                                'height (cdr (assoc 'height win)))))))))
+            (let ((win-key (cdr (assoc (cdr (assoc 'window-id win)) ewmctrl-window-id-keybind-alist)))
+                  (win-desktop (cdr (assoc 'desktop-number win)))
+                  (win-pid (cdr (assoc 'pid win)))
+                  (win-name (cdr (assoc 'title win))))
+              (insert (propertize (eval `(format ,ewmctrl-format-fields ,@ewmctrl-format-fields-order))
+                                  'window-id (cdr (assoc 'window-id win))
+                                  'title (cdr (assoc 'title win))
+                                  'width (cdr (assoc 'width win))
+                                  'height (cdr (assoc 'height win))))))))))
 
 (defun ewmctrl-resize-window (&optional key)
   "Resize desktop window.
