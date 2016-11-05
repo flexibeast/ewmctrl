@@ -1,12 +1,12 @@
-;;; ewmctrl.el --- Use `wmctrl' to manage desktop windows.
+;;; ewmctrl.el --- Use `wmctrl' to manage desktop windows via EWMH/NetWM.
 
-;; Copyright (C) 2015  Alexis <flexibeast@gmail.com>
+;; Copyright (C) 2015-2016  Alexis <flexibeast@gmail.com>
 
 ;; Author: Alexis <flexibeast@gmail.com>
 ;; Maintainer: Alexis <flexibeast@gmail.com>
 ;; Created: 2015-01-08
 ;; URL: https://github.com/flexibeast/ewmctrl
-;; Keywords: desktop, windows
+;; Keywords: desktop, windows, ewmh, netwm
 
 ;;
 ;; This file is NOT part of GNU Emacs.
