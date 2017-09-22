@@ -1,8 +1,9 @@
 ;;; ewmctrl.el --- Use `wmctrl' to manage desktop windows via EWMH/NetWM.
 
-;; Copyright (C) 2015-2016  Alexis <flexibeast@gmail.com>
+;; Copyright (C) 2015-2017  Alexis <flexibeast@gmail.com>, Adam Plaice <plaice.adam@gmail.com>
 
 ;; Author: Alexis <flexibeast@gmail.com>
+;;      Adam Plaice <plaice.adam@gmail.com>
 ;; Maintainer: Alexis <flexibeast@gmail.com>
 ;; Created: 2015-01-08
 ;; URL: https://github.com/flexibeast/ewmctrl
@@ -417,14 +418,18 @@ by ID."
     (cond
      ((eq 'desktop-number ewmctrl-sort-field)
       (sort windows-list #'(lambda (e1 e2)
-                             (string<
-                              (cdr (assoc 'desktop-number e1))
-                              (cdr (assoc 'desktop-number e2))))))
+                             (<
+                              (string-to-number
+                               (cdr (assoc 'desktop-number e1)))
+                              (string-to-number
+                               (cdr (assoc 'desktop-number e2)))))))
      ((eq 'desktop-number-reversed ewmctrl-sort-field)
       (sort windows-list #'(lambda (e1 e2)
-                             (string<
-                              (cdr (assoc 'desktop-number e2))
-                              (cdr (assoc 'desktop-number e1))))))
+                             (<
+                              (string-to-number
+                               (cdr (assoc 'desktop-number e2)))
+                              (string-to-number
+                               (cdr (assoc 'desktop-number e1)))))))
      ((eq 'name ewmctrl-sort-field)
       (sort windows-list #'(lambda (e1 e2)
                              (string<
